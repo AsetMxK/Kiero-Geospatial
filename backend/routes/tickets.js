@@ -1,0 +1,183 @@
+import express from 'express';
+import { Prisma } from '@prisma/client';
+import prisma from '../config/prismaClient.js';
+import authMiddleware from '../middleware/authMiddleware.js';
+import { getAggregatedTickets } from '../services/aggregationService.js';
+import { getDateRangeFilter, getRegionFilter } from '../utils/queryUtils.js';
+
+const router = express.Router();
+
+router.use(authMiddleware);
+
+// Ambang batas level zoom. Di atas atau sama dengan nilai ini, tampilkan pin individual.
+// Di bawah nilai ini, tampilkan kluster.
+const ZOOM_LEVEL_THRESHOLD = 15;
+// Batas maksimum jumlah tiket individu yang akan dikembalikan dalam satu permintaan.
+const MAX_INDIVIDUAL_TICKETS = 1000;
+
+/**
+ * @route GET /v1/tickets/view
+ * @description Endpoint cerdas yang mengembalikan kluster tiket teragregasi atau titik tiket individual
+ * berdasarkan tingkat zoom dan kotak pembatas (bounding box) peta. Responsnya beradaptasi untuk memberikan
+ * visualisasi yang paling sesuai untuk tampilan peta saat ini.
+ * @access Private
+ * @param {import('express').Request} req - Objek request Express.
+ * @param {number} req.query.minLng - Longitude minimum dari bounding box peta.
+ * @param {number} req.query.minLat - Latitude minimum dari bounding box peta.
+ * @param {number} req.query.maxLng - Longitude maksimum dari bounding box peta.
+ * @param {number} req.query.maxLat - Latitude maksimum dari bounding box peta.
+ * @param {number} req.query.zoom - Tingkat zoom peta saat ini.
+ * @param {string} [req.query.regionCode] - Kode hierarkis untuk wilayah yang akan difilter.
+ * @param {string} [req.query.scaid] - ID kode sistem untuk kategori tiket yang akan difilter.
+ * @param {string} [req.query.startDate] - Tanggal mulai untuk memfilter tiket (YYYY-MM-DD).
+ * @param {string} [req.query.endDate] - Tanggal akhir untuk memfilter tiket (YYYY-MM-DD).
+ * @param {import('express').Response} res - Objek response Express.
+ * @returns {Promise<void>}
+ */
+router.get('/view', async (req, res) => {
+  let { minLng, minLat, maxLng, maxLat, zoom, regionCode, scaid, startDate, endDate } = req.query;
+
+  if (!minLng || !minLat || !maxLng || !maxLat || !zoom) {
+    return res.status(400).json({
+      message: 'Parameter minLng, minLat, maxLng, maxLat, dan zoom diperlukan.',
+    });
+  }
+
+  const bounds = {
+    minLng: parseFloat(minLng),
+    minLat: parseFloat(minLat),
+    maxLng: parseFloat(maxLng),
+    maxLat: parseFloat(maxLat),
+  };
+
+  const zoomLevel = parseInt(zoom, 10);
+
+  try {
+    const data = await prisma.$transaction(async (tx) => {
+      if (!regionCode || !scaid) {
+        return [];
+      }
+
+      // Hasilkan klausa WHERE untuk regionCode dari utilitas
+      const regionWhereClause = getRegionFilter(regionCode, 'RAW');
+
+      // Dapatkan filter tanggal dari utilitas
+      const dateFilter = getDateRangeFilter(startDate, endDate);
+      const dateWhereClause = Prisma.sql`AND t.date_create BETWEEN ${dateFilter.gte} AND ${dateFilter.lte}`;
+
+      // Jika pengguna melakukan zoom-in cukup dekat (di atas ambang batas)
+      if (zoomLevel >= ZOOM_LEVEL_THRESHOLD) {
+        // Tambahkan filter scaid jika ada
+        const scaidWhereClause = scaid ? Prisma.sql`AND t.scaid = ${scaid}` : Prisma.empty;
+
+        // Ambil titik-titik tiket individual
+        const tickets = await tx.$queryRaw`
+          SELECT
+            t.id,
+            t.status,
+            ST_X(t.coordinates) AS lng,
+            ST_Y(t.coordinates) AS lat
+          FROM
+            tickets t
+          LEFT JOIN regions r ON t.region_id = r.id
+          WHERE
+            ST_Within(t.coordinates, ST_MakeEnvelope(${bounds.minLng}, ${bounds.minLat}, ${bounds.maxLng}, ${bounds.maxLat}, 4326))
+            AND ${regionWhereClause}
+            ${scaidWhereClause}
+            ${dateWhereClause}
+          LIMIT ${MAX_INDIVIDUAL_TICKETS};
+        `;
+        return tickets.map(ticket => ({
+          id: ticket.id.toString(),
+          status: ticket.status,
+          type: 'point',
+          coordinates: {
+            lat: Number(ticket.lat),
+            lng: Number(ticket.lng),
+          }
+        }));
+      } else {
+        // Jika pengguna melakukan zoom-out, ambil data kluster yang diagregasi
+        const clusters = await getAggregatedTickets(tx, bounds, zoomLevel, regionCode, scaid, startDate, endDate);
+        return clusters.map(cluster => ({
+          ...cluster,
+          count: Number(cluster.count),
+          type: 'cluster',
+        }));
+      }
+    }, {
+      isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+      timeout: 20000,
+    });
+
+    res.json({
+      message: 'Data peta berhasil diambil',
+      data: data,
+    });
+
+  } catch (error) {
+    if (error.message.includes('Invalid regionCode format')) {
+      return res.status(400).json({ message: error.message });
+    }
+    console.error('Gagal mengambil data peta:', error);
+    res.locals.errorMessage = error.stack;
+    res.status(500).json({ message: 'Terjadi kesalahan internal pada server' });
+  }
+});
+
+/**
+ * @route GET /v1/tickets/:id
+ * @description Mengambil informasi detail untuk satu tiket berdasarkan ID-nya.
+ * Endpoint ini melakukan join dengan tabel kategori untuk menyertakan deskripsi kategori yang dapat dibaca manusia.
+ * @access Private
+ * @param {import('express').Request} req - Objek request Express.
+ * @param {string} req.params.id - Pengidentifikasi unik tiket.
+ * @param {import('express').Response} res - Objek response Express.
+ * @returns {Promise<void>}
+ */
+router.get('/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const ticket = await prisma.tickets.findUniqueOrThrow({
+      where: { id: parseInt(id) },
+      select: {
+        id: true,
+        ticket_number: true,
+        address: true,
+        complaint_detail: true,
+        scaid: true,
+        status: true,
+        category_systemcode: {
+          select: {
+            description_eng: true
+          }
+        }
+      }
+    });
+
+    if (!ticket) {
+      return res.status(404).json({ message: 'Tiket tidak ditemukan' });
+    }
+
+    const formattedTicket = {
+      id: ticket.id,
+      status: ticket.status,
+      ticket_number: ticket.ticket_number,
+      address: ticket.address,
+      complaint_detail: ticket.complaint_detail,
+      category: `${ticket.scaid || ''} - ${ticket.category_systemcode?.description_eng || 'No Description'}`,
+    };
+
+    res.json({
+      message: 'Detail tiket berhasil diambil',
+      data: formattedTicket
+    });
+
+  } catch (error) {
+    console.error(`Gagal mengambil tiket ${id}:`, error);
+    res.locals.errorMessage = error.stack;
+    res.status(500).json({ message: 'Terjadi kesalahan internal pada server' });
+  }
+});
+
+export default router;

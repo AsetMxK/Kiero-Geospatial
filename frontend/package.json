@@ -1,0 +1,39 @@
+{
+  "name": "react-js",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "node generate-indexes.js && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "generate-indexes": "node generate-indexes.js"
+  },
+  "dependencies": {
+    "@floating-ui/react": "^0.27.16",
+    "@tanstack/react-query": "^5.51.1",
+    "@tippyjs/react": "^4.2.6",
+    "@vis.gl/react-google-maps": "^1.5.5",
+    "date-fns": "^4.1.0",
+    "framer-motion": "^12.23.24",
+    "react": "^19.0.0-rc.1",
+    "react-date-range": "^2.0.1",
+    "react-dom": "^19.0.0-rc.1",
+    "screenfull": "^6.0.2",
+    "tippy.js": "^6.3.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.36.0",
+    "@vitejs/plugin-react": "^5.0.3",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^9.36.0",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.20",
+    "globals": "^16.4.0",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.17",
+    "vite": "^7.1.7"
+  }
+}

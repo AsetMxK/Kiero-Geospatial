@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model category_actioncode {
+  acid            BigInt    @id @default(autoincrement())
+  description_ind String?   @db.VarChar(255)
+  description_eng String?   @db.VarChar(255)
+  created_by      String?   @db.VarChar(50)
+  created_at      DateTime? @db.Timestamp(0)
+  updated_by      String?   @db.VarChar(50)
+  updated_at      DateTime? @db.Timestamp(0)
+}
+
+model category_systemcode {
+  id              Int       @id @default(autoincrement())
+  scaid           String    @unique(map: "scaid") @db.VarChar(10)
+  description_ind String?   @db.VarChar(255)
+  description_eng String?   @db.VarChar(255)
+  acid            String?   @db.VarChar(20)
+  sapadmin        Boolean?
+  ticket_closed   Boolean?
+  notif_email     Boolean?  @default(false)
+  created_by      String?   @db.VarChar(50)
+  created_at      DateTime? @db.Timestamp(0)
+  updated_by      String?   @db.VarChar(50)
+  updated_at      DateTime? @db.Timestamp(0)
+  tickets         tickets[]
+}
+
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model regions {
+  id                   Int                     @id @default(autoincrement())
+  level                String?                 @db.VarChar(10)
+  tipe_adm             String?                 @db.VarChar(3)
+  nama                 String?                 @db.VarChar(50)
+  kode_prov            String?                 @db.VarChar(3)
+  kode_kab             String?                 @db.VarChar(11)
+  kode_kec             String?                 @db.VarChar(11)
+  luas                 Float?
+  geom                 Unsupported("geometry")
+  phone_prefix_regions phone_prefix_regions[]
+  tickets              tickets[]
+
+  @@index([level, kode_prov, kode_kab, kode_kec], map: "idx_hirarki")
+  @@index([kode_kec, nama], map: "idx_kec_nama")
+  @@index([kode_kab], map: "idx_kode_kab_ops")
+  @@index([kode_kec], map: "idx_kode_kec_ops")
+  @@index([kode_prov], map: "idx_kode_prov_ops")
+  @@index([geom], map: "idx_geom", type: Gist)
+  @@index([nama(ops: raw("gin_trgm_ops"))], map: "idx_nama_trgm", type: Gin)
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model tickets {
+  id                  Int                     @id @default(autoincrement())
+  customer_id         String                  @db.VarChar(50)
+  ticket_number       String                  @db.VarChar(50)
+  ticket_source       String                  @db.VarChar(50)
+  status              String                  @db.VarChar(50)
+  region_id           Int?
+  province            String?                 @db.VarChar(100)
+  city                String?                 @db.VarChar(150)
+  district            String?                 @db.VarChar(150)
+  village             String?                 @db.VarChar(150)
+  coordinates         Unsupported("geometry")
+  address             String?
+  complaint_detail    String?
+  response_detail     String?
+  sla                 Int?
+  persen_sla          Int?
+  ticket_position     String?                 @db.VarChar(5)
+  department_id       Int?
+  remark              String?
+  remark_date         DateTime?               @db.Date
+  source_information  String?                 @db.VarChar(50)
+  thread_id           String?                 @db.VarChar(50)
+  account_id          String?                 @db.VarChar(150)
+  account_name        String?                 @db.VarChar(100)
+  user_create         String?                 @db.VarChar(50)
+  date_create         DateTime?               @db.Timestamp(0)
+  user_closed         String?                 @db.VarChar(50)
+  date_closed         DateTime?               @db.Timestamp(0)
+  last_response_by    String?                 @db.VarChar(50)
+  last_response_at    DateTime?               @db.Timestamp(0)
+  equipment_id        String?                 @db.VarChar(20)
+  scaid               String?                 @db.VarChar(10)
+  acid                Int?
+  model_id            String?                 @db.VarChar(20)
+  product_id          String?                 @db.VarChar(20)
+  callaction_id       Int?
+  charge_type         Int?
+  service_area        String?                 @db.VarChar(20)
+  service_type        String?                 @db.VarChar(20)
+  request_date        DateTime?               @db.Timestamp(0)
+  sent_date_sap       DateTime?               @db.Timestamp(0)
+  sent_msg_sap        String?                 @db.VarChar(255)
+  category_systemcode category_systemcode?    @relation(fields: [scaid], references: [scaid], map: "fk_tickets_category_systemcode")
+  regions             regions?                @relation(fields: [region_id], references: [id], map: "fk_tickets_regions")
+
+  @@index([acid], map: "acid")
+  @@index([province], map: "category_id")
+  @@index([city], map: "category_sublv1_id")
+  @@index([district], map: "category_sublv2_id")
+  @@index([address], map: "category_sublv3_id")
+  @@index([account_id], map: "cust_email")
+  @@index([account_name], map: "cust_name")
+  @@index([customer_id], map: "customer_id")
+  @@index([date_closed], map: "date_closed")
+  @@index([date_create], map: "date_create")
+  @@index([department_id], map: "department_id")
+  @@index([village], map: "dispatch_department")
+  @@index([region_id], map: "fk_tickets_region_id")
+  @@index([user_create, date_create, ticket_source, callaction_id], map: "idx_tickets_composite")
+  @@index([last_response_at], map: "last_response_at")
+  @@index([last_response_by], map: "last_response_by")
+  @@index([remark_date], map: "mass_distruption")
+  @@index([scaid], map: "fk_category_systemcode_scaid")
+  @@index([sla], map: "sla")
+  @@index([source_information], map: "source_information")
+  @@index([status], map: "status")
+  @@index([thread_id], map: "thread_id")
+  @@index([ticket_number], map: "ticket_number")
+  @@index([ticket_position], map: "ticket_position")
+  @@index([ticket_source], map: "ticket_source")
+  @@index([user_closed], map: "user_closed")
+  @@index([user_create], map: "user_create")
+  @@index([coordinates], map: "idx_coordinates_gist", type: Gist)
+  @@index([region_id, scaid], map: "idx_region_scaid")
+  @@index([region_id, date_create], map: "idx_tickets_region_date")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model spatial_ref_sys {
+  srid      Int     @id
+  auth_name String? @db.VarChar(256)
+  auth_srid Int?
+  srtext    String? @db.VarChar(2048)
+  proj4text String? @db.VarChar(2048)
+}
+
+model phone_prefixes {
+  id                   BigInt                 @id @default(autoincrement())
+  prefix               String                 @unique @db.VarChar(50)
+  description          String?
+  parent_id            BigInt?
+  phone_prefix_regions phone_prefix_regions[]
+  parent               phone_prefixes?        @relation("PhonePrefixHierarchy", fields: [parent_id], references: [id])
+  children             phone_prefixes[]       @relation("PhonePrefixHierarchy")
+
+  @@index([prefix])
+}
+
+model phone_prefix_regions {
+  phone_prefix_id BigInt
+  region_id       Int
+  prefix          phone_prefixes @relation(fields: [phone_prefix_id], references: [id])
+  region          regions        @relation(fields: [region_id], references: [id])
+
+  @@id([phone_prefix_id, region_id])
+}
