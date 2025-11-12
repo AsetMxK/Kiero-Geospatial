@@ -19,7 +19,7 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 console = Console()
-TARGET_ROWS = 5_000_000
+TARGET_ROWS = 50_000
 COMMIT_BATCH_SIZE = 5000
 
 TICKET_SOURCES = ['Call', 'Whatsapp', 'Email', 'Web', 'App']

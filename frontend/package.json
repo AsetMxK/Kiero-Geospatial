@@ -5,10 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node generate-indexes.js && vite build",
+    "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "generate-indexes": "node generate-indexes.js"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@floating-ui/react": "^0.27.16",
