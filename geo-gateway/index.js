@@ -46,6 +46,14 @@ const startServer = async () => {
   });
   app.use(loggingMiddleware);
 
+  app.get('/health', (req, res) => {
+    res.status(200).json({
+      status: 'UP',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime()
+    });
+  });
+
   // Rute Publik: Otorisasi Klien (digunakan secara internal oleh proksi)
   // URL: http://localhost:4000/oauth/token
   app.use('/oauth', authRouter);

@@ -40,6 +40,14 @@ const startServer = async () => {
 
   app.use(loggingMiddleware);
 
+  app.get('/health', (req, res) => {
+    res.status(200).json({
+      status: 'UP',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime()
+    });
+  });
+
   // Routes
   app.use('/v1/geo', geoRouter);
   app.use('/v1/categories', categoryRouter);

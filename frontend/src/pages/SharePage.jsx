@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { APIProvider } from '@vis.gl/react-google-maps';
 import RegionFilterForm from '../components/RegionFilterForm';
 import CategoryFilterForm from '../components/CategoryFilterForm';
@@ -41,7 +42,7 @@ const SharePage = () => {
         if (selection.desaName) {
             params.set('desakel', selection.desaName);
         }
-        
+
         if (categorySelection) {
             params.set('category', categorySelection);
         }
@@ -76,7 +77,7 @@ const SharePage = () => {
                         currentSelection={selection}
                         onSelectionChange={handleSelectionChange}
                     />
-                    <CategoryFilterForm 
+                    <CategoryFilterForm
                         currentSelection={categorySelection}
                         onSelectionChange={setCategorySelection}
                     />
@@ -104,9 +105,9 @@ const SharePage = () => {
                                 Buka di Tab Baru
                             </button>
                         </div>
-                         <a href="/" className="mt-8 inline-block px-4 py-2 text-sm text-blue-500 hover:underline">
+                        <Link to="/" className="mt-8 inline-block px-4 py-2 text-sm text-blue-500 hover:underline">
                             Kembali ke Peta Utama
-                        </a>
+                        </Link>
                     </div>
                 </main>
             </div>

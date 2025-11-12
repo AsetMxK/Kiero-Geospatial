@@ -19,6 +19,7 @@
     "react": "^19.0.0-rc.1",
     "react-date-range": "^2.0.1",
     "react-dom": "^19.0.0-rc.1",
+    "react-router-dom": "^7.9.5",
     "screenfull": "^6.0.2",
     "tippy.js": "^6.3.7"
   },

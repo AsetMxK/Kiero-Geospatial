@@ -1,6 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { BrowserRouter } from 'react-router-dom';
 import App from './App.jsx';
 import './index.css';
 import { initAuthServiceWorker } from './lib/auth-sw-client.js';
@@ -9,12 +10,23 @@ const queryClient = new QueryClient();
 const container = document.getElementById('root');
 
 /**
- * Titik masuk utama untuk aplikasi React.
- * Fungsi asinkron ini pertama-tama menginisialisasi service worker otentikasi,
- * memastikan service worker tersebut siap sebelum antarmuka pengguna aplikasi di-render. Hal ini mencegah
- * kondisi balapan (race condition) terkait otentikasi. Setelah service worker siap,
- * fungsi ini me-render komponen root React (`App`) ke dalam DOM.
- * Jika inisialisasi gagal, fungsi ini menampilkan pesan kesalahan di dalam container root.
+ * Titik masuk utama (main entry point) untuk aplikasi React.
+ *
+ * Fungsi asinkron ini melakukan dua hal utama sebelum me-render aplikasi:
+ * 1. Menginisialisasi service worker otentikasi (`initAuthServiceWorker`) untuk mencegah
+ * kondisi balapan (race condition) terkait otentikasi.
+ * 2. Menyiapkan dan me-render aplikasi React ke DOM setelah service worker siap.
+ *
+ * Proses render membungkus komponen `<App />` utama dengan:
+ * - `<QueryClientProvider>`: Untuk menyediakan fungsionalitas React Query ke seluruh aplikasi.
+ * - `<BrowserRouter>`: Untuk mengaktifkan routing sisi klien (client-side routing).
+ *
+ * `BrowserRouter` dikonfigurasi secara dinamis dengan `basename={import.meta.env.BASE_URL}`.
+ * Ini memastikan bahwa routing aplikasi bekerja dengan benar di bawah sub-path
+ * yang ditentukan dalam `vite.config.js` (misal, /mendawai-geospatial/).
+ *
+ * Jika inisialisasi service worker gagal, fungsi ini akan menangkap error
+ * dan menampilkan pesan kesalahan di dalam container root DOM.
  * @async
  */
 async function main() {
@@ -26,14 +38,16 @@ async function main() {
       root.render(
         <React.StrictMode>
           <QueryClientProvider client={queryClient}>
-            <App />
+            <BrowserRouter basename={import.meta.env.BASE_URL}>
+              <App />
+            </BrowserRouter>
           </QueryClientProvider>
         </React.StrictMode>
       );
     }
   } catch (error) {
     console.error("Gagal memulai aplikasi:", error);
-    if(container) {
+    if (container) {
       container.innerHTML = `<div style="padding: 20px;"><h1>Gagal memuat aplikasi</h1><p>Terjadi kesalahan saat inisialisasi. Silakan coba muat ulang halaman.</p><pre>${error.message}</pre></div>`;
     }
   }
