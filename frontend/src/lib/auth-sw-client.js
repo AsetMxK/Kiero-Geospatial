@@ -8,7 +8,7 @@ const SERVICE_WORKER_PATH = import.meta.env.BASE_URL + 'service-worker.js';
  * @private
  */
 async function registerAndActivateSW() {
-  const registration = await navigator.serviceWorker.register(SERVICE_WORKER_PATH, { scope: '/' });
+  const registration = await navigator.serviceWorker.register(SERVICE_WORKER_PATH, { scope: import.meta.env.BASE_URL });
 
   // Listener ini akan memicu reload jika SW baru mengambil alih.
   navigator.serviceWorker.addEventListener('controllerchange', () => {
