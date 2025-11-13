@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App.jsx';
 import './index.css';
-import { initAuthServiceWorker } from './lib/auth-sw-client.js';
+import { authenticateApp } from './utils/authService.js';
 
 const queryClient = new QueryClient();
 const container = document.getElementById('root');
@@ -13,9 +13,9 @@ const container = document.getElementById('root');
  * Titik masuk utama (main entry point) untuk aplikasi React.
  *
  * Fungsi asinkron ini melakukan dua hal utama sebelum me-render aplikasi:
- * 1. Menginisialisasi service worker otentikasi (`initAuthServiceWorker`) untuk mencegah
- * kondisi balapan (race condition) terkait otentikasi.
- * 2. Menyiapkan dan me-render aplikasi React ke DOM setelah service worker siap.
+ * 1. Menjalankan autentikasi aplikasi awal (`authenticateApp`) untuk mendapatkan
+ * token dan menyimpannya di sessionStorage.
+ * 2. Menyiapkan dan me-render aplikasi React ke DOM setelah autentikasi siap.
  *
  * Proses render membungkus komponen `<App />` utama dengan:
  * - `<QueryClientProvider>`: Untuk menyediakan fungsionalitas React Query ke seluruh aplikasi.
@@ -31,7 +31,7 @@ const container = document.getElementById('root');
  */
 async function main() {
   try {
-    await initAuthServiceWorker();
+    await authenticateApp();
 
     if (container) {
       const root = createRoot(container);

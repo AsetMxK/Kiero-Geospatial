@@ -2,6 +2,7 @@ import { Routes, Route, Link } from 'react-router-dom';
 import MapPage from './pages/MapPage';
 import SharePage from './pages/SharePage';
 import IframeMapPage from './pages/IframeMapPage';
+import IframeMapPageClientAuth from './pages/IframeMapPageClientAuth';
 
 /**
  * Komponen halaman 404 (Not Found) sederhana.
@@ -41,6 +42,7 @@ const App = () => {
             <Route path="/" element={<MapPage />} />
             <Route path="/share" element={<SharePage />} />
             <Route path="/map-iframe" element={<IframeMapPage />} />
+            <Route path="/map-iframe-client" element={<IframeMapPageClientAuth />} />
             <Route path="*" element={<NotFound />} />
         </Routes>
     );
