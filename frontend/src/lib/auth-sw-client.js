@@ -1,4 +1,4 @@
-const SERVICE_WORKER_PATH = '/service-worker.js';
+const SERVICE_WORKER_PATH = import.meta.env.BASE_URL + 'service-worker.js';
 
 /**
  * Fungsi pembantu internal yang menangani logika pendaftaran dan aktivasi Service Worker (SW).
