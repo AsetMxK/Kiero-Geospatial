@@ -49,28 +49,30 @@ const MapComponent = ({
     isTouchDevice,
     selection,
     isNavigating,
-    onInfoChange = () => {},
-    onSelectionChange = () => {},
+    onInfoChange = () => { },
+    onSelectionChange = () => { },
     mapViewMode,
-    onSubRegionClick = () => {},
-    onRegionClick = () => {},
+    onSubRegionClick = () => { },
+    onRegionClick = () => { },
     isPinningMode,
-    onAddPin = () => {},
+    onAddPin = () => { },
     pins = [],
-    onDeletePin = () => {},
-    onUpdatePinTitle = () => {},
+    onDeletePin = () => { },
+    onUpdatePinTitle = () => { },
     activePinId,
-    onActivePinChange = () => {},
+    onActivePinChange = () => { },
+    pinActionType,
     newlyCreatedPinId,
-    onMapClick = () => {},
-    onMapLoad = () => {},
+    onMapClick = () => { },
+    onMapLoad = () => { },
     isBoundaryTransparent,
     tickets = [],
     activeTicketId,
-    onActiveTicketChange = () => {},
+    onActiveTicketChange = () => { },
     activeTicketDetails,
     isTicketDetailLoading,
-    ticketDetailError
+    ticketDetailError,
+    forcedZoom = null
 }) => {
     const map = useMap();
     const [labels, setLabels] = useState([]);
@@ -172,17 +174,23 @@ const MapComponent = ({
         }
 
         if (!masterBounds.isEmpty()) {
-            const padding = {
-                left: ACTION_SIDEBAR_WIDTH + (isRegionSidebarOpen ? REGION_INFO_SIDEBAR_WIDTH : 0) + 20,
-                right: 20,
-                top: 20,
-                bottom: 20
-            };
-            map.fitBounds(masterBounds, padding);
+            if (forcedZoom) {
+                // JIKA ada parameter zoom, gunakan Center + Zoom manual
+                map.setCenter(masterBounds.getCenter());
+                map.setZoom(forcedZoom);
+            } else {
+                const padding = {
+                    left: ACTION_SIDEBAR_WIDTH + (isRegionSidebarOpen ? REGION_INFO_SIDEBAR_WIDTH : 0) + 20,
+                    right: 20,
+                    top: 20,
+                    bottom: 20
+                };
+                map.fitBounds(masterBounds, padding);
+            }
         }
         setLabels(newLabels);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [map, selection, provinsiData, kabkotaData, kecamatanData, desaData, onInfoChange]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [map, selection, provinsiData, kabkotaData, kecamatanData, desaData, onInfoChange, forcedZoom]);
 
 
     useEffect(() => {
@@ -260,6 +268,7 @@ const MapComponent = ({
                         pin={pin}
                         onDelete={onDeletePin}
                         onUpdateTitle={onUpdatePinTitle}
+                        actionType={pinActionType}
                         isActive={isActive}
                         onSelect={handleSelect}
                         isNewlyCreated={pin.id === newlyCreatedPinId}

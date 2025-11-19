@@ -16,3 +16,22 @@ export function stringToHslColor(str) {
   const hue = hash % 360;
   return `hsl(${hue}, 70%, 60%)`;
 }
+
+export const getInitialDateRange = () => {
+  const params = new URLSearchParams(window.location.search);
+  const startParam = params.get('startDate');
+  const endParam = params.get('endDate');
+
+  if (startParam && endParam) {
+    const startDate = new Date(startParam);
+    const endDate = new Date(endParam);
+    if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+      return { startDate, endDate, key: 'selection' };
+    }
+  }
+  return {
+    startDate: new Date(new Date().setDate(new Date().getDate() - 30)),
+    endDate: new Date(),
+    key: 'selection'
+  };
+};
