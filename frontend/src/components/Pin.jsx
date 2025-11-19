@@ -50,12 +50,13 @@ const PinTitleEditor = ({ initialTitle, onSave }) => {
  * @param {boolean} props.isActive - Apakah pin ini sedang aktif (dipilih).
  * @param {Function} props.onSelect - Fungsi callback untuk menangani pemilihan/pembatalan pilihan pin.
  * @param {boolean} props.isNewlyCreated - Bendera untuk menunjukkan apakah pin ini baru saja dibuat, untuk memicu animasi masuk.
+ * @param {string} [props.actionType='copy'] - 'copy' untuk menyalin info, 'select' untuk mengirim postMessage.
  * @returns {JSX.Element} Komponen Pin.
  */
-const Pin = ({ pin, onDelete, onUpdateTitle, isActive, onSelect, isNewlyCreated }) => {
+const Pin = ({ pin, onDelete, onUpdateTitle, isActive, onSelect, isNewlyCreated, actionType = 'copy' }) => {
     const [markerRef, marker] = useAdvancedMarkerRef();
     const [isEditing, setIsEditing] = useState(false);
-    const [isCopied, setIsCopied] = useState(false);
+    const [isActionSuccess, setIsActionSuccess] = useState(false);
     const [isInfoWindowVisible, setIsInfoWindowVisible] = useState(false);
 
     const [runPulse, setRunPulse] = useState(false);
@@ -89,7 +90,7 @@ const Pin = ({ pin, onDelete, onUpdateTitle, isActive, onSelect, isNewlyCreated 
     useEffect(() => {
         if (!isActive) {
             setIsEditing(false);
-            setIsCopied(false);
+            setIsActionSuccess(false);
         }
     }, [isActive]);
 
@@ -101,47 +102,66 @@ const Pin = ({ pin, onDelete, onUpdateTitle, isActive, onSelect, isNewlyCreated 
 
     const handleDelete = useCallback(() => onDelete(pin.id), [pin.id, onDelete]);
 
-    const handleCopy = useCallback(() => {
-        const params = new URLSearchParams();
-        params.set('share_lat', pin.lat.toString());
-        params.set('share_lng', pin.lng.toString());
-        params.set('share_title', pin.title);
-        const shareUrl = `${window.location.origin}/?${params.toString()}`;
+    const handlePrimaryAction = useCallback(() => {
+        if (actionType === "select") {
+            window.parent.postMessage({
+                source: 'mapIframeApp',
+                type: 'pinSelected', // Menggunakan tipe spesifik agar parent bisa membedakan
+                payload: pin
+            }, '*');
 
-        const textParts = [pin.title];
+            setIsActionSuccess(true);
+            setTimeout(() => setIsActionSuccess(false), 2000);
 
-        if (pin.adminInfo.provinsi) {
-            const adminParts = [
-                pin.adminInfo.provinsi.nama,
-                pin.adminInfo.kab_kota.nama,
-                pin.adminInfo.kecamatan.nama,
-                pin.adminInfo.desa.nama,
-            ].filter(Boolean);
+        } else {
+            const params = new URLSearchParams();
+            params.set('share_lat', pin.lat.toString());
+            params.set('share_lng', pin.lng.toString());
+            params.set('share_title', pin.title);
+            const shareUrl = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
 
-            if (adminParts.length > 0) {
-                textParts.push(`Wilayah: ${adminParts.join(', ')}`);
+            const textParts = [pin.title];
+
+            if (pin.adminInfo.provinsi) {
+                const adminParts = [
+                    pin.adminInfo.provinsi.nama,
+                    pin.adminInfo.kab_kota.nama,
+                    pin.adminInfo.kecamatan.nama,
+                    pin.adminInfo.desa.nama,
+                ].filter(Boolean);
+
+                if (adminParts.length > 0) {
+                    textParts.push(`Wilayah: ${adminParts.join(', ')}`);
+                }
             }
+
+            textParts.push(
+                `Latitude: ${pin.lat.toFixed(9)}`,
+                `Longitude: ${pin.lng.toFixed(9)}`,
+                '',
+                `Tautan Berbagi: ${shareUrl}`
+            );
+
+            const textToCopy = textParts.join('\n');
+
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                setIsActionSuccess(true);
+                setTimeout(() => setIsActionSuccess(false), 2000);
+            });
         }
-
-        textParts.push(
-            `Latitude: ${pin.lat.toFixed(9)}`,
-            `Longitude: ${pin.lng.toFixed(9)}`,
-            '',
-            `Tautan Berbagi: ${shareUrl}`
-        );
-
-        const textToCopy = textParts.join('\n');
-
-        navigator.clipboard.writeText(textToCopy).then(() => {
-            setIsCopied(true);
-            setTimeout(() => setIsCopied(false), 2000);
-        });
-    }, [pin]);
+    }, [pin, actionType]);
 
     const handleSaveTitle = useCallback((newTitle) => {
         onUpdateTitle(pin.id, newTitle);
         setIsEditing(false);
     }, [pin.id, onUpdateTitle]);
+
+    const getButtonText = () => {
+        if (actionType === 'select') {
+            return isActionSuccess ? 'Terpilih!' : 'Pilih';
+        }
+        return isActionSuccess ? 'Tersalin!' : 'Salin';
+    };
 
     return (
         <>
@@ -236,14 +256,14 @@ const Pin = ({ pin, onDelete, onUpdateTitle, isActive, onSelect, isNewlyCreated 
                         </div>
                         <div className="flex gap-2 mt-2">
                             <button
-                                onClick={handleCopy}
-                                className={`text-xs text-white px-3 py-1.5 rounded transition-colors ${isCopied
+                                onClick={handlePrimaryAction}
+                                className={`text-xs text-white px-3 py-1.5 rounded transition-colors ${isActionSuccess
                                     ? 'bg-green-500 cursor-default'
                                     : 'bg-blue-500 hover:bg-blue-600'
                                     }`}
-                                disabled={isCopied}
+                                disabled={isActionSuccess}
                             >
-                                {isCopied ? 'Terpilih!' : 'Pilih'}
+                                {getButtonText()}
                             </button>
                             <button onClick={handleDelete} className="text-xs bg-red-500 text-white px-3 py-1.5 rounded hover:bg-red-600">Hapus</button>
                         </div>

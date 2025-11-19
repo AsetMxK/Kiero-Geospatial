@@ -22,6 +22,7 @@ import { getSelectionFromNames } from '../utils/name-search';
 import { findRegionByPoint } from '../utils/geoApiService';
 import { addPinToHistory, getPinHistory, removePinFromHistory, updatePinInHistory } from '../utils/pin-history';
 import { ACTION_SIDEBAR_WIDTH, REGION_INFO_SIDEBAR_WIDTH } from '../constants/layout';
+import { getInitialDateRange } from '../utils/mapUtils'
 
 /**
  * Komponen halaman utama aplikasi peta.
@@ -50,11 +51,7 @@ const MapPage = () => {
     const [isSidebarHidden, setIsSidebarHidden] = useState(false);
     const [isTouchDevice, setIsTouchDevice] = useState(false);
     const [categorySelection, setCategorySelection] = useState(null);
-    const [dateRange, setDateRange] = useState({
-        startDate: new Date(new Date().setDate(new Date().getDate() - 30)),
-        endDate: new Date(),
-        key: 'selection'
-    });
+    const [dateRange, setDateRange] = useState(getInitialDateRange);
     const [isLoading, setIsLoading] = useState(true);
     const [urlError, setUrlError] = useState(null);
     const [searchError, setSearchError] = useState(null);
@@ -81,6 +78,11 @@ const MapPage = () => {
     const mapContainerRef = useRef(null);
     const pannedTicketId = useRef(null);
     const [mapViewport, setMapViewport] = useState(null);
+    const [urlZoom] = useState(() => {
+        const params = new URLSearchParams(window.location.search);
+        const z = params.get('zoom');
+        return z ? parseInt(z, 10) : null;
+    });
 
     const handleToggleFullscreen = () => {
         if (screenfull.isEnabled) {
@@ -382,7 +384,7 @@ const MapPage = () => {
 
         const targetPoint = projection.fromLatLngToPoint(new window.google.maps.LatLng(target.lat, target.lng));
         const targetZoom = zoom || mapInstance.getZoom();
-        const scale = Math.pow(2, targetZoom); 
+        const scale = Math.pow(2, targetZoom);
         const newCenterPoint = new window.google.maps.Point(
             targetPoint.x - (totalOffset / scale),
             targetPoint.y
@@ -853,6 +855,7 @@ const MapPage = () => {
                             activeTicketDetails={activeTicketDetails}
                             isTicketDetailLoading={isTicketDetailLoading}
                             ticketDetailError={ticketDetailError}
+                            forcedZoom={urlZoom}
                         />
                         {previewInfo && <RegionPreviewInfoWindow position={previewInfo.position} regionName={previewInfo.name} stats={regionStats} loading={statsLoading} onClose={() => setPreviewInfo(null)} onNavigate={() => handleNavigateToRegion(previewInfo.featureProps)} />}
                         {fabPosition && <InfoWindow position={fabPosition} onCloseClick={() => setFabPosition(null)}> <FloatingActionButtons onShowInfo={() => { setActiveSidebar('regionInfo'); setIsSidebarHidden(false); setFabPosition(null); }} onShowSubRegions={() => { syncViewMode('drill-down'); const newSelection = { ...currentSelection }; setCurrentSelection(newSelection); navigationHistory.current.push({ selection: newSelection, viewMode: 'drill-down' }); setFabPosition(null); setActiveSidebar(null); }} canDrillDown={!currentSelection.desaName} /> </InfoWindow>}

@@ -23,6 +23,7 @@ import { getSelectionFromNames } from '../utils/name-search';
 import { findRegionByPoint } from '../utils/geoApiService';
 import { addPinToHistory, getPinHistory, removePinFromHistory, updatePinInHistory } from '../utils/pin-history';
 import { ACTION_SIDEBAR_WIDTH, REGION_INFO_SIDEBAR_WIDTH } from '../constants/layout';
+import { getInitialDateRange } from '../utils/mapUtils'
 
 /**
  * Komponen halaman utama aplikasi peta.
@@ -51,11 +52,7 @@ const IframeFullMapPage = () => {
     const [isSidebarHidden, setIsSidebarHidden] = useState(false);
     const [isTouchDevice, setIsTouchDevice] = useState(false);
     const [categorySelection, setCategorySelection] = useState(null);
-    const [dateRange, setDateRange] = useState({
-        startDate: new Date(new Date().setDate(new Date().getDate() - 30)),
-        endDate: new Date(),
-        key: 'selection'
-    });
+    const [dateRange, setDateRange] = useState(getInitialDateRange);
     const [isLoading, setIsLoading] = useState(true);
     const [urlError, setUrlError] = useState(null);
     const [searchError, setSearchError] = useState(null);
@@ -85,6 +82,11 @@ const IframeFullMapPage = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isAuthenticating, setIsAuthenticating] = useState(true);
     const [phoneNumberToSearch, setPhoneNumberToSearch] = useState(null);
+    const [urlZoom] = useState(() => {
+        const params = new URLSearchParams(window.location.search);
+        const z = params.get('zoom');
+        return z ? parseInt(z, 10) : null;
+    });
 
     const { data: prefixData, loading: prefixLoading, error: prefixError } = usePrefixSearch(phoneNumberToSearch);
 
@@ -168,9 +170,9 @@ const IframeFullMapPage = () => {
         window.parent.postMessage({
             source: 'mapIframeApp',
             type: 'regionDataLoaded',
-            payload: { 
-                matchedPrefix: prefixData.matchedPrefix, 
-                regions: prefixData.coverage.regions 
+            payload: {
+                matchedPrefix: prefixData.matchedPrefix,
+                regions: prefixData.coverage.regions
             }
         }, '*');
 
@@ -185,9 +187,9 @@ const IframeFullMapPage = () => {
 
             // Atur gaya visual (Warna Teal/Hijau seperti Client Auth)
             mapInstance.data.setStyle({
-                fillColor: '#14B8A6', 
-                fillOpacity: 0.3, 
-                strokeColor: '#14B8A6', 
+                fillColor: '#14B8A6',
+                fillOpacity: 0.3,
+                strokeColor: '#14B8A6',
                 strokeWeight: 2,
                 clickable: false // Non-interaktif agar hanya sebagai highlight visual
             });
@@ -939,6 +941,7 @@ const IframeFullMapPage = () => {
                             pins={pins}
                             onDeletePin={handleDeletePin}
                             onUpdatePinTitle={handleUpdatePinTitle}
+                            pinActionType="select"
                             activePinId={activePinId}
                             onActivePinChange={handleActivePinChange}
                             newlyCreatedPinId={newlyCreatedPinId}
@@ -950,6 +953,7 @@ const IframeFullMapPage = () => {
                             activeTicketDetails={activeTicketDetails}
                             isTicketDetailLoading={isTicketDetailLoading}
                             ticketDetailError={ticketDetailError}
+                            forcedZoom={urlZoom}
                         />
                         {previewInfo && <RegionPreviewInfoWindow position={previewInfo.position} regionName={previewInfo.name} stats={regionStats} loading={statsLoading} onClose={() => setPreviewInfo(null)} onNavigate={() => handleNavigateToRegion(previewInfo.featureProps)} />}
                         {fabPosition && <InfoWindow position={fabPosition} onCloseClick={() => setFabPosition(null)}> <FloatingActionButtons onShowInfo={() => { setActiveSidebar('regionInfo'); setIsSidebarHidden(false); setFabPosition(null); }} onShowSubRegions={() => { syncViewMode('drill-down'); const newSelection = { ...currentSelection }; setCurrentSelection(newSelection); navigationHistory.current.push({ selection: newSelection, viewMode: 'drill-down' }); setFabPosition(null); setActiveSidebar(null); }} canDrillDown={!currentSelection.desaName} /> </InfoWindow>}
