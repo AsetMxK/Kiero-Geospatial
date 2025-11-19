@@ -243,7 +243,7 @@ const Pin = ({ pin, onDelete, onUpdateTitle, isActive, onSelect, isNewlyCreated 
                                     }`}
                                 disabled={isCopied}
                             >
-                                {isCopied ? 'Tersalin!' : 'Salin'}
+                                {isCopied ? 'Terpilih!' : 'Pilih'}
                             </button>
                             <button onClick={handleDelete} className="text-xs bg-red-500 text-white px-3 py-1.5 rounded hover:bg-red-600">Hapus</button>
                         </div>
