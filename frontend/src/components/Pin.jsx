@@ -200,6 +200,13 @@ const Pin = ({ pin, onDelete, onUpdateTitle, isActive, onSelect, isNewlyCreated,
         setIsEditing(false);
     }, [pin.id, onUpdateTitle]);
 
+    const getButtonText = () => {
+        if (actionType === 'select') {
+            return isActionSuccess ? 'Terpilih!' : 'Pilih';
+        }
+        return isActionSuccess ? 'Tersalin!' : 'Salin';
+    };
+
     return (
         <>
             <AdvancedMarker
