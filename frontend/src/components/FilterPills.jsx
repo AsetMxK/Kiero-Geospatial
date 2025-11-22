@@ -22,7 +22,7 @@ import CalendarIcon from './icons/CalendarIcon';
  * dikelola menggunakan pustaka `@floating-ui/react`.
  *
  * @param {object} props - Properti komponen.
- * @param {string|undefined} props.selectedCategory - ID kategori (`scaid`) yang saat ini dipilih.
+ * @param {string|undefined} props.selectedCategory - ID kategori (`id`) yang saat ini dipilih.
  * @param {Function} props.onCategoryChange - Fungsi callback yang dipanggil saat pilihan kategori berubah.
  * @param {{startDate: Date, endDate: Date, key: string}} props.dateRange - Objek rentang tanggal saat ini.
  * @param {Function} props.onDateRangeChange - Fungsi callback yang dipanggil saat pilihan rentang tanggal berubah.
@@ -33,6 +33,8 @@ const FilterPills = ({
     onCategoryChange,
     dateRange,
     onDateRangeChange,
+    categoriesData,
+    categoriesLoading
 }) => {
     const [isCategoryOpen, setIsCategoryOpen] = useState(false);
     const {
@@ -70,12 +72,13 @@ const FilterPills = ({
         getFloatingProps: getDateFloatingProps,
     } = useInteractions([dateClick, dateDismiss]);
 
-    const { data: categories, loading } = useCategoryData();
+    const categories = categoriesData || [];
+    const loading = categoriesLoading;
 
-    const categoryOptions = categories.map(cat => ({
-        value: cat.scaid,
-        name: `${cat.scaid} - ${cat.description_eng}`
-    }));
+    const categoryOptions = categories? categories.map(cat => ({
+        value: cat.id,
+        name: `${cat.category_name}`
+    })) : [];
 
     const handleCategoryChange = (e) => {
         onCategoryChange(e.target.value);
@@ -96,7 +99,7 @@ const FilterPills = ({
                     className={`flex items-center gap-2 px-3 py-1.5 rounded-full shadow-md text-sm transition-colors ${selectedCategory ? 'bg-blue-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'}`}
                 >
                     <KategoriIcon className="w-4 h-4" />
-                    <span>{selectedCategory ? (categories.find(c => c.scaid === selectedCategory)?.description_eng || 'Kategori Terpilih') : 'Semua Kategori'}</span>
+                    <span>{selectedCategory ? (categories.find(c => c.id === selectedCategory)?.category_name || 'Kategori Terpilih') : 'Semua Kategori'}</span>
                 </button>
                 <FloatingPortal>
                     {isCategoryOpen && (
@@ -113,6 +116,7 @@ const FilterPills = ({
                                     options={categoryOptions}
                                     placeholder={loading ? "Memuat..." : "-- Pilih Kategori --"}
                                     disabled={loading}
+                                    className="min-w-[150px] max-w-[200px]"
                                 />
                             </div>
                         </div>

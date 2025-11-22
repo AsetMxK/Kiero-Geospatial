@@ -11,7 +11,7 @@ const TICKETS_DATA_CACHE_DURATION_MS = 60 * 1000;
  * dari worker ke main thread untuk caching), dan mengelola state data, pemuatan, dan kesalahan.
  *
  * @param {string | null} regionCode - Kode wilayah yang aktif untuk pemfilteran.
- * @param {string | null} scaid - ID kategori sistem yang aktif untuk pemfilteran.
+ * @param {string | null} categoryId - ID kategori sistem yang aktif untuk pemfilteran.
  * @param {string} mapViewMode - Mode tampilan peta saat ini (misalnya, 'region-only').
  * @param {string} startDate - Tanggal mulai untuk filter, format YYYY-MM-DD.
  * @param {string} endDate - Tanggal akhir untuk filter, format YYYY-MM-DD.
@@ -22,7 +22,7 @@ const TICKETS_DATA_CACHE_DURATION_MS = 60 * 1000;
  *   updateMapView: (bounds: object, zoom: number) => void;
  * }} Objek yang berisi data peta, status pemuatan, kesalahan, dan fungsi untuk memperbarui tampilan.
  */
-export const useTicketsData = (regionCode, scaid, mapViewMode, startDate, endDate) => {
+export const useTicketsData = (regionCode, categoryId, mapViewMode, startDate, endDate) => {
   const [mapData, setMapData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -96,7 +96,7 @@ export const useTicketsData = (regionCode, scaid, mapViewMode, startDate, endDat
   }, []);
 
   const updateMapView = useCallback((bounds, zoom) => {
-    if (!regionCode || !scaid || mapViewMode !== 'region-only' || !workerRef.current) {
+    if (!regionCode || mapViewMode !== 'region-only' || !workerRef.current) {
       if (mapData.length > 0) {
         setMapData([]);
       }
@@ -114,12 +114,12 @@ export const useTicketsData = (regionCode, scaid, mapViewMode, startDate, endDat
         bounds,
         zoom,
         regionCode,
-        scaid,
+        categoryId,
         startDate,
         endDate,
       },
     });
-  }, [regionCode, scaid, mapViewMode, startDate, endDate, mapData.length]);
+  }, [regionCode, categoryId, mapViewMode, startDate, endDate, mapData.length]);
 
   return { mapData, isMapDataLoading: isLoading, mapDataError: error, updateMapView };
 };

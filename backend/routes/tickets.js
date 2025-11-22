@@ -28,14 +28,14 @@ const MAX_INDIVIDUAL_TICKETS = 1000;
  * @param {number} req.query.maxLat - Latitude maksimum dari bounding box peta.
  * @param {number} req.query.zoom - Tingkat zoom peta saat ini.
  * @param {string} [req.query.regionCode] - Kode hierarkis untuk wilayah yang akan difilter.
- * @param {string} [req.query.scaid] - ID kode sistem untuk kategori tiket yang akan difilter.
+ * @param {string} [req.query.category_id] - ID kode sistem untuk kategori tiket yang akan difilter.
  * @param {string} [req.query.startDate] - Tanggal mulai untuk memfilter tiket (YYYY-MM-DD).
  * @param {string} [req.query.endDate] - Tanggal akhir untuk memfilter tiket (YYYY-MM-DD).
  * @param {import('express').Response} res - Objek response Express.
  * @returns {Promise<void>}
  */
 router.get('/view', async (req, res) => {
-  let { minLng, minLat, maxLng, maxLat, zoom, regionCode, scaid, startDate, endDate } = req.query;
+  let { minLng, minLat, maxLng, maxLat, zoom, regionCode, category, startDate, endDate } = req.query;
 
   if (!minLng || !minLat || !maxLng || !maxLat || !zoom) {
     return res.status(400).json({
@@ -50,11 +50,13 @@ router.get('/view', async (req, res) => {
     maxLat: parseFloat(maxLat),
   };
 
+  const category_id = parseInt(category);
+
   const zoomLevel = parseInt(zoom, 10);
 
   try {
     const data = await prisma.$transaction(async (tx) => {
-      if (!regionCode || !scaid) {
+      if (!regionCode) {
         return [];
       }
 
@@ -63,12 +65,12 @@ router.get('/view', async (req, res) => {
 
       // Dapatkan filter tanggal dari utilitas
       const dateFilter = getDateRangeFilter(startDate, endDate);
-      const dateWhereClause = Prisma.sql`AND t.date_create BETWEEN ${dateFilter.gte} AND ${dateFilter.lte}`;
+      const dateWhereClause = Prisma.sql`AND t.created_at BETWEEN ${dateFilter.gte} AND ${dateFilter.lte}`;
 
       // Jika pengguna melakukan zoom-in cukup dekat (di atas ambang batas)
       if (zoomLevel >= ZOOM_LEVEL_THRESHOLD) {
-        // Tambahkan filter scaid jika ada
-        const scaidWhereClause = scaid ? Prisma.sql`AND t.scaid = ${scaid}` : Prisma.empty;
+        // Tambahkan filter category_id jika ada
+        const scaidWhereClause = category_id ? Prisma.sql`AND t.category_id = ${category_id}` : Prisma.empty;
 
         // Ambil titik-titik tiket individual
         const tickets = await tx.$queryRaw`
@@ -98,7 +100,7 @@ router.get('/view', async (req, res) => {
         }));
       } else {
         // Jika pengguna melakukan zoom-out, ambil data kluster yang diagregasi
-        const clusters = await getAggregatedTickets(tx, bounds, zoomLevel, regionCode, scaid, startDate, endDate);
+        const clusters = await getAggregatedTickets(tx, bounds, zoomLevel, regionCode, category_id, startDate, endDate);
         return clusters.map(cluster => ({
           ...cluster,
           count: Number(cluster.count),
@@ -138,18 +140,19 @@ router.get('/view', async (req, res) => {
 router.get('/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    const ticket = await prisma.tickets.findUniqueOrThrow({
-      where: { id: parseInt(id) },
+    const ticket = await prisma.tickets.findFirst({
+      where: { id: id },
       select: {
         id: true,
         ticket_number: true,
-        address: true,
+        channel_source: true,
+        account_id: true,
         complaint_detail: true,
-        scaid: true,
+        category_id: true,
         status: true,
-        category_systemcode: {
+        categories: {
           select: {
-            description_eng: true
+            category_name: true
           }
         }
       }
@@ -163,9 +166,10 @@ router.get('/:id', async (req, res) => {
       id: ticket.id,
       status: ticket.status,
       ticket_number: ticket.ticket_number,
-      address: ticket.address,
       complaint_detail: ticket.complaint_detail,
-      category: `${ticket.scaid || ''} - ${ticket.category_systemcode?.description_eng || 'No Description'}`,
+      channel_source: ticket.channel_source,
+      account_id: ticket.account_id,
+      category: `${ticket.categories?.category_name || 'No Description'}`,
     };
 
     res.json({

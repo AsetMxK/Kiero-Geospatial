@@ -1,3 +1,4 @@
+/* eslint-disable no-useless-escape */
 /**
  * Menghasilkan warna HSL (Hue, Saturation, Lightness) yang deterministik dari sebuah string input.
  * Fungsi ini menggunakan algoritma hash sederhana untuk mengubah string menjadi nilai hue,
@@ -34,4 +35,14 @@ export const getInitialDateRange = () => {
     endDate: new Date(),
     key: 'selection'
   };
+};
+
+export const toSlug = (text) => {
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')     // Ganti spasi dengan -
+    .replace(/[^\w\-]+/g, '') // Hapus karakter non-word
+    .replace(/\-\-+/g, '-');  // Ganti multiple - dengan single -
 };

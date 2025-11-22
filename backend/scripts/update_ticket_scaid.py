@@ -65,12 +65,12 @@ def fetch_data(conn, query):
         return []
 
 def main():
-    console.print("🚀 [bold blue]Memulai skrip untuk update 'scaid' tiket...[/bold blue]")
+    console.print("🚀 [bold blue]Memulai skrip untuk update 'category_id' tiket...[/bold blue]")
     validate_config()
 
     console.print("\nSilakan pilih mode update:")
-    console.print("  [yellow]1[/yellow]. Update SEMUA baris (menimpa data scaid yang sudah ada).")
-    console.print("  [yellow]2[/yellow]. Update HANYA baris yang kolom scaid-nya kosong (NULL).")
+    console.print("  [yellow]1[/yellow]. Update SEMUA baris (menimpa data category_id yang sudah ada).")
+    console.print("  [yellow]2[/yellow]. Update HANYA baris yang kolom category_id-nya kosong (NULL).")
     
     choice = console.input("Masukkan pilihan Anda (1 atau 2): ")
 
@@ -78,8 +78,8 @@ def main():
         fetch_query = "SELECT id FROM tickets ORDER BY id"
         console.print("\n[cyan]Mode dipilih: Mengupdate SEMUA tiket.[/cyan]")
     elif choice == '2':
-        fetch_query = "SELECT id FROM tickets WHERE scaid IS NULL ORDER BY id"
-        console.print("\n[cyan]Mode dipilih: Mengupdate tiket dengan 'scaid' KOSONG.[/cyan]")
+        fetch_query = "SELECT id FROM tickets WHERE category_id IS NULL ORDER BY id"
+        console.print("\n[cyan]Mode dipilih: Mengupdate tiket dengan 'category_id' KOSONG.[/cyan]")
     else:
         console.print("❌ [bold red]Pilihan tidak valid. Proses dihentikan.[/bold red]")
         sys.exit(1)
@@ -99,14 +99,14 @@ def main():
             console.print("⚠️ [yellow]Tidak ada tiket yang sesuai dengan kriteria untuk diupdate. Proses selesai.[/yellow]")
             return
 
-        with Status("📚 Mengambil daftar 'scaid' dari database...", spinner="dots", console=console):
-            scaid_list = fetch_data(conn, "SELECT scaid FROM category_systemcode")
+        with Status("📚 Mengambil daftar 'category_id' dari database...", spinner="dots", console=console):
+            scaid_list = fetch_data(conn, "SELECT category_id FROM category_systemcode")
             
         if not scaid_list:
-            console.print("⚠️ [yellow]Tidak ada 'scaid' yang ditemukan di 'category_systemcode'. Proses dihentikan.[/yellow]")
+            console.print("⚠️ [yellow]Tidak ada 'category_id' yang ditemukan di 'category_systemcode'. Proses dihentikan.[/yellow]")
             return
             
-        console.print(f"✅ [green]Ditemukan {len(ticket_ids):,} tiket untuk diupdate dan {len(scaid_list)} kategori scaid.[/green]")
+        console.print(f"✅ [green]Ditemukan {len(ticket_ids):,} tiket untuk diupdate dan {len(scaid_list)} kategori category_id.[/green]")
         console.print("\n--- [bold]Memulai Proses Update[/bold] ---")
 
         cursor = conn.cursor()
@@ -137,11 +137,11 @@ def main():
         with Live(render_group, console=console) as live:
             for i, ticket_id in enumerate(ticket_ids):
                 scaid_to_assign = next(scaid_cycle)
-                update_query = "UPDATE tickets SET scaid = %s WHERE id = %s"
+                update_query = "UPDATE tickets SET category_id = %s WHERE id = %s"
                 
                 cursor.execute(update_query, (scaid_to_assign, ticket_id))
                 
-                log_msg = f"Update [bold yellow]ID: {ticket_id}[/] -> [bold cyan]scaid: '{scaid_to_assign}'[/]"
+                log_msg = f"Update [bold yellow]ID: {ticket_id}[/] -> [bold cyan]category_id: '{scaid_to_assign}'[/]"
                 log_messages.append(log_msg)
                 
                 if (i + 1) % COMMIT_BATCH_SIZE == 0:

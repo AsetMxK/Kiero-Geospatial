@@ -22,7 +22,8 @@ import { getSelectionFromNames } from '../utils/name-search';
 import { findRegionByPoint } from '../utils/geoApiService';
 import { addPinToHistory, getPinHistory, removePinFromHistory, updatePinInHistory } from '../utils/pin-history';
 import { ACTION_SIDEBAR_WIDTH, REGION_INFO_SIDEBAR_WIDTH } from '../constants/layout';
-import { getInitialDateRange } from '../utils/mapUtils'
+import { getInitialDateRange, toSlug } from '../utils/mapUtils'
+import { useCategoryData } from '../hooks/useCategoryData';
 
 /**
  * Komponen halaman utama aplikasi peta.
@@ -83,6 +84,8 @@ const MapPage = () => {
         const z = params.get('zoom');
         return z ? parseInt(z, 10) : null;
     });
+
+    const { data: categories, loading: categoriesLoading } = useCategoryData();
 
     const handleToggleFullscreen = () => {
         if (screenfull.isEnabled) {
@@ -158,7 +161,10 @@ const MapPage = () => {
 
     const { data: regionStats, loading: statsLoading } = useRegionStats(previewInfo?.code, dateRange);
 
-    useUrlSync(currentSelection, activePinId, categorySelection, isInitialLoadComplete, {
+    const selectedCategoryObj = categories?.find(c => c.id === categorySelection);
+    const categoryUrlValue = selectedCategoryObj ? toSlug(selectedCategoryObj.category_name) : null;
+
+    useUrlSync(currentSelection, activePinId, categoryUrlValue, isInitialLoadComplete, {
         startDate: dateRange.startDate.toISOString().split('T')[0],
         endDate: dateRange.endDate.toISOString().split('T')[0]
     });
@@ -224,9 +230,15 @@ const MapPage = () => {
     useEffect(() => {
         const processUrlParams = async () => {
             const params = new URLSearchParams(window.location.search);
-            const categoryParam = params.get('category');
-            if (categoryParam) {
-                setCategorySelection(categoryParam);
+            const categorySlugParam = params.get('category');
+            if (!categoriesLoading && categories && categorySlugParam) {
+                const foundCategory = categories.find(cat =>
+                    toSlug(cat.category_name) === categorySlugParam
+                );
+
+                if (foundCategory) {
+                    setCategorySelection(foundCategory.id);
+                }
             }
             const nameParams = {
                 provinsi: params.get('provinsi') || undefined,
@@ -256,7 +268,7 @@ const MapPage = () => {
         };
 
         processUrlParams();
-    }, []);
+    }, [categories, categoriesLoading]);
 
     const { data: provinsiData, loading: provinsiLoading } = useBoundaryData({ level: 'provinsi' });
     const { data: kabkotaData, loading: kabkotaLoading } = useBoundaryData({ level: 'kabkota', provinceCode: currentSelection.provinceCode });
@@ -383,8 +395,10 @@ const MapPage = () => {
         }
 
         const targetPoint = projection.fromLatLngToPoint(new window.google.maps.LatLng(target.lat, target.lng));
-        const targetZoom = zoom || mapInstance.getZoom();
-        const scale = Math.pow(2, targetZoom);
+        const currentZoom = mapInstance.getZoom();
+        const finalZoom = zoom && currentZoom < zoom ? zoom : currentZoom;
+        const scale = Math.pow(2, finalZoom);
+
         const newCenterPoint = new window.google.maps.Point(
             targetPoint.x - (totalOffset / scale),
             targetPoint.y
@@ -392,7 +406,7 @@ const MapPage = () => {
         const newCenterLatLng = projection.fromPointToLatLng(newCenterPoint);
 
         mapInstance.panTo(newCenterLatLng);
-        if (zoom && mapInstance.getZoom() < zoom) {
+        if (zoom && currentZoom < zoom) {
             mapInstance.setZoom(zoom);
         }
     }, [mapInstance, activeSidebar, isSidebarHidden]);
@@ -569,6 +583,7 @@ const MapPage = () => {
         }
 
         setCurrentSelection(newSelection);
+        setFabPosition(null);
     }, [provinsiData, kabkotaData, kecamatanData, kabkotaLoading, kecamatanLoading, desaLoading]);
 
     const handleAdminSelectionChange = useCallback((selection, level) => {
@@ -868,7 +883,13 @@ const MapPage = () => {
                                 <SearchBar onPlaceSelect={handlePlaceSelect} />
                             </div>
                             <div className="absolute top-4 pointer-events-auto z-30" style={{ left: `calc(${ACTION_SIDEBAR_WIDTH}px + ${REGION_INFO_SIDEBAR_WIDTH}px + 2rem)` }}>
-                                <FilterPills selectedCategory={categorySelection} onCategoryChange={setCategorySelection} dateRange={dateRange} onDateRangeChange={setDateRange} />
+                                <FilterPills
+                                    selectedCategory={categorySelection}
+                                    onCategoryChange={setCategorySelection}
+                                    categoriesData={categories}
+                                    categoriesLoading={categoriesLoading}
+                                    dateRange={dateRange}
+                                    onDateRangeChange={setDateRange} />
                             </div>
                             <div className="absolute top-0 left-0 h-full pointer-events-auto flex z-20">
                                 <ActionSidebar onButtonClick={handleSidebarButtonClick} activeSidebar={activeSidebar} />

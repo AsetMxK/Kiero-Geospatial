@@ -66,8 +66,8 @@ export const useBoundaryData = ({
   const queryResult = useQuery({
     queryKey,
     queryFn,
-    staleTime: 1000 * 60 * 5, // 5 menit
-    cacheTime: 1000 * 60 * 30, // 30 menit
+    staleTime: 1000 * 60 * 30, // 30 menit
+    cacheTime: 1000 * 60 * 60, // 60 menit
     enabled: enabled(),
     refetchOnWindowFocus: false, 
     retry: (failureCount, error) => {

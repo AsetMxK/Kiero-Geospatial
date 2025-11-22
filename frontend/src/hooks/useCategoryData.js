@@ -9,7 +9,7 @@ const EMPTY_ARRAY = [];
  * caching, dan status pemuatan/kesalahan. Data kategori dianggap cukup statis,
  * sehingga di-cache untuk waktu yang relatif lama.
  *
- * @returns {import('@tanstack/react-query').UseQueryResult & { data: Array<{scaid: string, description_eng: string}>, loading: boolean }}
+ * @returns {import('@tanstack/react-query').UseQueryResult & { data: Array<{id: string, category_name: string}>, loading: boolean }}
  *   Hasil dari `useQuery`, diperkaya dengan `data` yang dijamin berupa array dan alias `loading`.
  */
 export const useCategoryData = () => {

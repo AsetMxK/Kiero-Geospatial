@@ -1,7 +1,9 @@
+
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { AdvancedMarker, InfoWindow, useAdvancedMarkerRef } from '@vis.gl/react-google-maps';
+import { AdvancedMarker, InfoWindow, useAdvancedMarkerRef, useMapsLibrary } from '@vis.gl/react-google-maps';
 import Tooltip from './Tooltip';
 import MapMarkerIcon from './icons/MapMarkerIcon';
+import TrashIcon from './icons/TrashIcon';
 
 /**
  * Komponen terisolasi untuk mengedit judul.
@@ -11,7 +13,8 @@ const PinTitleEditor = ({ initialTitle, onSave }) => {
     const [titleInput, setTitleInput] = useState(initialTitle);
 
     const handleSaveClick = () => {
-        onSave(titleInput);
+        const trimmedTitle = titleInput.trim();
+        onSave(trimmedTitle === '' ? 'Point of Interest' : trimmedTitle);
     };
 
     const handleKeyDown = (e) => {
@@ -21,19 +24,26 @@ const PinTitleEditor = ({ initialTitle, onSave }) => {
     };
 
     return (
-        <>
+        <div className="flex items-center gap-2 w-full">
             <input
                 type="text"
                 value={titleInput}
                 onChange={(e) => setTitleInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="border px-2 py-1 rounded w-full bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="border px-2 py-1 rounded w-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                 autoFocus
             />
             <Tooltip content="Simpan">
-                <button onClick={handleSaveClick} className="p-1 text-green-600 hover:text-green-800">✔</button>
+                <button
+                    onClick={handleSaveClick}
+                    className="p-1.5 bg-green-50 text-green-600 rounded hover:bg-green-100 hover:text-green-700 transition-colors flex-shrink-0"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                </button>
             </Tooltip>
-        </>
+        </div>
     );
 };
 
@@ -43,21 +53,47 @@ const PinTitleEditor = ({ initialTitle, onSave }) => {
  * yang menampilkan detail pin dan menyediakan tindakan seperti mengedit judul, menyalin info, dan menghapus.
  * Komponen ini juga mengelola state internal untuk mode edit, status penyalinan, dan animasi.
  *
- * @param {object} props - Properti komponen.
- * @param {object} props.pin - Objek data pin yang berisi `id`, `lat`, `lng`, `title`, dan `adminInfo`.
- * @param {Function} props.onDelete - Fungsi callback untuk menghapus pin, dipanggil dengan `pin.id`.
- * @param {Function} props.onUpdateTitle - Fungsi callback untuk memperbarui judul pin, dipanggil dengan `pin.id` dan judul baru.
- * @param {boolean} props.isActive - Apakah pin ini sedang aktif (dipilih).
- * @param {Function} props.onSelect - Fungsi callback untuk menangani pemilihan/pembatalan pilihan pin.
- * @param {boolean} props.isNewlyCreated - Bendera untuk menunjukkan apakah pin ini baru saja dibuat, untuk memicu animasi masuk.
- * @param {string} [props.actionType='copy'] - 'copy' untuk menyalin info, 'select' untuk mengirim postMessage.
- * @returns {JSX.Element} Komponen Pin.
+ * @param { object } props - Properti komponen.
+ * @param { object } props.pin - Objek data pin yang berisi`id`, `lat`, `lng`, `title`, dan`adminInfo`.
+ * @param { Function } props.onDelete - Fungsi callback untuk menghapus pin, dipanggil dengan`pin.id`.
+ * @param { Function } props.onUpdateTitle - Fungsi callback untuk memperbarui judul pin, dipanggil dengan `pin.id` dan judul baru.
+ * @param { boolean } props.isActive - Apakah pin ini sedang aktif(dipilih).
+ * @param { Function } props.onSelect - Fungsi callback untuk menangani pemilihan / pembatalan pilihan pin.
+ * @param { boolean } props.isNewlyCreated - Bendera untuk menunjukkan apakah pin ini baru saja dibuat, untuk memicu animasi masuk.
+ * @param { string } [props.actionType = 'copy'] - 'copy' untuk menyalin info, 'select' untuk mengirim postMessage.
+ * @returns { JSX.Element } Komponen Pin.
  */
 const Pin = ({ pin, onDelete, onUpdateTitle, isActive, onSelect, isNewlyCreated, actionType = 'copy' }) => {
     const [markerRef, marker] = useAdvancedMarkerRef();
     const [isEditing, setIsEditing] = useState(false);
     const [isActionSuccess, setIsActionSuccess] = useState(false);
     const [isInfoWindowVisible, setIsInfoWindowVisible] = useState(false);
+
+    const geocodingLib = useMapsLibrary('geocoding');
+    const [address, setAddress] = useState(null);
+    const [isLoadingAddress, setIsLoadingAddress] = useState(false);
+
+    useEffect(() => {
+        if (!geocodingLib || !isActive || address) return;
+
+        setIsLoadingAddress(true);
+        const geocoder = new geocodingLib.Geocoder();
+        geocoder.geocode({ location: { lat: pin.lat, lng: pin.lng } }, (results, status) => {
+            if (status === 'OK' && results[0]) {
+                // Prioritize results that contain street address information
+                const preferredResult = results.find(r =>
+                    r.types.includes('street_address') ||
+                    r.types.includes('route') ||
+                    r.types.includes('premise')
+                ) || results[0];
+
+                setAddress(preferredResult.formatted_address);
+            } else {
+                setAddress('Alamat tidak ditemukan');
+            }
+            setIsLoadingAddress(false);
+        });
+    }, [geocodingLib, isActive, pin.lat, pin.lng, address]);
 
     const [runPulse, setRunPulse] = useState(false);
     const prevIsActive = useRef(isActive);
@@ -104,6 +140,10 @@ const Pin = ({ pin, onDelete, onUpdateTitle, isActive, onSelect, isNewlyCreated,
 
     const handlePrimaryAction = useCallback(() => {
         if (actionType === "select") {
+            if (address) {
+                pin.address = address;
+            }
+
             window.parent.postMessage({
                 source: 'mapIframeApp',
                 type: 'pinSelected', // Menggunakan tipe spesifik agar parent bisa membedakan
@@ -135,6 +175,10 @@ const Pin = ({ pin, onDelete, onUpdateTitle, isActive, onSelect, isNewlyCreated,
                 }
             }
 
+            if (address) {
+                textParts.push(`Alamat: ${address}`);
+            }
+
             textParts.push(
                 `Latitude: ${pin.lat.toFixed(9)}`,
                 `Longitude: ${pin.lng.toFixed(9)}`,
@@ -149,19 +193,12 @@ const Pin = ({ pin, onDelete, onUpdateTitle, isActive, onSelect, isNewlyCreated,
                 setTimeout(() => setIsActionSuccess(false), 2000);
             });
         }
-    }, [pin, actionType]);
+    }, [pin, actionType, address]);
 
     const handleSaveTitle = useCallback((newTitle) => {
         onUpdateTitle(pin.id, newTitle);
         setIsEditing(false);
     }, [pin.id, onUpdateTitle]);
-
-    const getButtonText = () => {
-        if (actionType === 'select') {
-            return isActionSuccess ? 'Terpilih!' : 'Pilih';
-        }
-        return isActionSuccess ? 'Tersalin!' : 'Salin';
-    };
 
     return (
         <>
@@ -180,92 +217,151 @@ const Pin = ({ pin, onDelete, onUpdateTitle, isActive, onSelect, isNewlyCreated,
                     onCloseClick={onSelect}
                     disableAutoPan={true}
                 >
-                    <div className="p-4 pt-0 font-sans relative" style={{ minWidth: '240px' }}>
-                        <div className="absolute top-0 right-2">
+                    <div className="p-0 font-sans relative w-[260px]">
+                        {/* Header with Title and Close Button */}
+                        <div className="flex items-start justify-between p-3 pb-2">
+                            <div className="flex-1 pr-6">
+                                {isEditing ? (
+                                    <PinTitleEditor
+                                        initialTitle={pin.title}
+                                        onSave={handleSaveTitle}
+                                    />
+                                ) : (
+                                    <div className="group relative">
+                                        <h3 className="font-semibold text-gray-900 text-sm leading-tight pr-5" title={pin.title}>
+                                            {pin.title}
+                                        </h3>
+                                        <button
+                                            onClick={() => setIsEditing(true)}
+                                            className="absolute right-0 top-0 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 text-gray-400 hover:text-blue-600"
+                                            title="Edit"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                                                <path d="M5.433 13.917l1.262-3.155A4 4 0 017.58 9.42l6.92-6.918a2.121 2.121 0 013 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 01-.65-.65z" />
+                                                <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0010 3H4.75A2.75 2.75 0 002 5.75v9.5A2.75 2.75 0 004.75 18h9.5A2.75 2.75 0 0017 15.25V10a.75.75 0 00-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5z" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                )}
+                                {/* Compact Coordinates */}
+                                <div className="flex items-center gap-1 text-[10px] text-gray-500 mt-0.5">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3 opacity-60">
+                                        <path fillRule="evenodd" d="M9.69 18.933l.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 00.281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 103 9c0 3.492 1.698 5.988 3.355 7.584a13.731 13.731 0 002.273 1.765 11.842 11.842 0 00.976.544l.062.029.006.003.002.001.003.001a.75.75 0 00.01-.003zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                                    </svg>
+                                    <span>{pin.lat.toFixed(6)}, {pin.lng.toFixed(6)}</span>
+                                </div>
+                            </div>
                             <Tooltip content="Tutup">
                                 <button
                                     onClick={onSelect}
-                                    className="text-gray-400 hover:text-gray-800 focus:outline-none"
-                                    style={{ fontSize: '1.5rem', lineHeight: 1 }}
+                                    className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors"
                                 >
-                                    &times;
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                                        <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+                                    </svg>
                                 </button>
                             </Tooltip>
                         </div>
 
-                        <div className="flex items-center gap-2 mb-2 pt-3 pr-4">
-                            {isEditing ? (
-                                <PinTitleEditor
-                                    initialTitle={pin.title}
-                                    onSave={handleSaveTitle}
-                                />
-                            ) : (
-                                <>
-                                    <div className="font-bold text-base" title={pin.title}>
-                                        {pin.title.length > 25
-                                            ? `${pin.title.slice(0, 25)}...`
-                                            : pin.title}
-                                    </div>
-                                    <Tooltip content="Ubah judul">
-                                        <button onClick={() => setIsEditing(true)} className="p-1 text-gray-500 hover:text-gray-800">✏️</button>
-                                    </Tooltip>
-                                </>
-                            )}
-                        </div>
-                        <div className="text-sm mb-3">
-                            <p><strong>Lat:</strong> {pin.lat.toFixed(9)}</p>
-                            <p><strong>Lng:</strong> {pin.lng.toFixed(9)}</p>
-                        </div>
+                        {/* Content Body */}
+                        <div className="px-3 pb-3 space-y-3">
 
-                        <div className="border-t pt-2 mt-2 text-xs text-gray-600">
-                            {pin.isLoadingAdminInfo && (
-                                <div className="flex items-center gap-2">
-                                    <div className="w-4 h-4 border-2 border-dashed rounded-full animate-spin border-gray-400"></div>
-                                    <span>Mencari info wilayah...</span>
+                            {/* Admin Info - Compact Card Style */}
+                            {pin.isLoadingAdminInfo ? (
+                                <div className="flex items-center gap-2 text-xs text-gray-500 py-2">
+                                    <div className="w-3 h-3 border-2 border-dashed rounded-full animate-spin border-gray-400"></div>
+                                    <span>Memuat info wilayah...</span>
+                                </div>
+                            ) : pin.adminInfo && pin.adminInfo.provinsi ? (
+                                <div className="bg-gray-50 rounded-md p-2 text-xs border border-gray-100">
+                                    {(() => {
+                                        const desa = pin.adminInfo.desa;
+                                        const kec = pin.adminInfo.kecamatan;
+                                        const kab = pin.adminInfo.kab_kota;
+                                        const prov = pin.adminInfo.provinsi;
+
+                                        const desaType = desa?.tipe === '1' ? 'Desa' : 'Kel.';
+                                        const kabType = kab?.tipe === '4' ? 'Kab.' : 'Kota';
+
+                                        return (
+                                            <div className="flex flex-col gap-0.5">
+                                                {desa && kec && (
+                                                    <div className="font-medium text-gray-800">
+                                                        {desaType} {desa.nama}, Kec. {kec.nama}
+                                                    </div>
+                                                )}
+                                                {kab && prov && (
+                                                    <div className="text-gray-500">
+                                                        {kabType} {kab.nama}, {prov.nama}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            ) : (
+                                <div className="text-xs italic text-gray-400 py-1">
+                                    Di luar batas administrasi
                                 </div>
                             )}
 
-                            {!pin.isLoadingAdminInfo && pin.adminInfo && !pin.adminInfo.provinsi && (
-                                <p className='italic text-gray-500'>Lokasi tidak berada dalam batas administrasi.</p>
+                            {/* Address Section */}
+                            {isLoadingAddress ? (
+                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                    <div className="w-3 h-3 border-2 border-dashed rounded-full animate-spin border-gray-400"></div>
+                                    <span>Mencari alamat...</span>
+                                </div>
+                            ) : address && (
+                                <div className="flex gap-2 items-start text-xs text-gray-600">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 mt-0.5 text-gray-400 flex-shrink-0">
+                                        <path fillRule="evenodd" d="M9.69 18.933l.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 00.281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 103 9c0 3.492 1.698 5.988 3.355 7.584a13.731 13.731 0 002.273 1.765 11.842 11.842 0 00.976.544l.062.029.006.003.002.001.003.001a.75.75 0 00.01-.003zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                                    </svg>
+                                    <span className="break-words leading-relaxed">{address}</span>
+                                </div>
                             )}
 
-                            {pin.adminInfo && pin.adminInfo.provinsi && (() => {
-                                const getLabel = (level, type) => {
-                                    if (level === 'kab_kota') {
-                                        if (type === '4') return 'Kabupaten';
-                                        if (type === '5') return 'Kota';
-                                        return 'Kab/Kota';
-                                    }
-                                    if (level === 'desa') {
-                                        if (type === '1') return 'Desa';
-                                        if (type === '2') return 'Kelurahan';
-                                        return 'Desa/Kel';
-                                    }
-                                    return level.charAt(0).toUpperCase() + level.slice(1);
-                                };
-
-                                return (
-                                    <ul className="space-y-1">
-                                        {pin.adminInfo.provinsi && <li><strong>Provinsi:</strong> {pin.adminInfo.provinsi.nama}</li>}
-                                        {pin.adminInfo.kab_kota && <li><strong>{getLabel('kab_kota', pin.adminInfo.kab_kota.tipe)}:</strong> {pin.adminInfo.kab_kota.nama}</li>}
-                                        {pin.adminInfo.kecamatan && <li><strong>Kecamatan:</strong> {pin.adminInfo.kecamatan.nama}</li>}
-                                        {pin.adminInfo.desa && <li><strong>{getLabel('desa', pin.adminInfo.desa.tipe)}:</strong> {pin.adminInfo.desa.nama}</li>}
-                                    </ul>
-                                );
-                            })()}
-                        </div>
-                        <div className="flex gap-2 mt-2">
-                            <button
-                                onClick={handlePrimaryAction}
-                                className={`text-xs text-white px-3 py-1.5 rounded transition-colors ${isActionSuccess
-                                    ? 'bg-green-500 cursor-default'
-                                    : 'bg-blue-500 hover:bg-blue-600'
-                                    }`}
-                                disabled={isActionSuccess}
-                            >
-                                {getButtonText()}
-                            </button>
-                            <button onClick={handleDelete} className="text-xs bg-red-500 text-white px-3 py-1.5 rounded hover:bg-red-600">Hapus</button>
+                            {/* Actions Footer */}
+                            <div className="flex gap-2 pt-2 mt-1">
+                                <button
+                                    onClick={handlePrimaryAction}
+                                    disabled={isActionSuccess}
+                                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition ${isActionSuccess
+                                        ? 'bg-green-50 text-green-700 border border-green-200'
+                                        : 'bg-blue-600 text-white border border-transparent hover:bg-blue-700 shadow-sm hover:shadow'
+                                        }`}
+                                >
+                                    {isActionSuccess ? (
+                                        <>
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
+                                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                            </svg>
+                                            {actionType === 'select' ? 'Terpilih' : 'Tersalin'}
+                                        </>
+                                    ) : (
+                                        <>
+                                            {actionType === 'select' ? (
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
+                                                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                                                </svg>
+                                            ) : (
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
+                                                    <path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0117 6.622V12.5a1.5 1.5 0 01-1.5 1.5h-1v-3.379a3 3 0 00-.879-2.121L10.5 5.379A3 3 0 008.379 4.5H7v-1z" />
+                                                    <path d="M4.5 6A1.5 1.5 0 003 7.5v9A1.5 1.5 0 004.5 18h7a1.5 1.5 0 001.5-1.5v-5.879a1.5 1.5 0 00-.44-1.06L9.44 6.439A1.5 1.5 0 008.378 6H4.5z" />
+                                                </svg>
+                                            )}
+                                            {actionType === 'select' ? 'Pilih' : 'Salin'}
+                                        </>
+                                    )}
+                                </button>
+                                <Tooltip content="Hapus Pin">
+                                    <button
+                                        onClick={handleDelete}
+                                        className="flex items-center justify-center px-3 py-1.5 rounded text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 border border-red-100 transition-colors"
+                                    >
+                                        <TrashIcon className="w-4 h-4" />
+                                    </button>
+                                </Tooltip>
+                            </div>
                         </div>
                     </div>
                 </InfoWindow>
