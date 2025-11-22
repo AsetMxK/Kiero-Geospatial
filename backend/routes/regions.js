@@ -36,7 +36,7 @@ router.get('/:regionCode/stats', async (req, res) => {
       by: ['status'],
       where: {
         regions: regionFilter,
-        date_create: dateFilter,
+        created_at: dateFilter,
       },
       _count: {
         _all: true,
@@ -105,21 +105,21 @@ router.get('/:regionCode/stats/details', async (req, res) => {
     const regionFilter = getRegionFilter(regionCode, 'ORM');
 
     const stats = await prisma.tickets.groupBy({
-      by: ['scaid'],
+      by: ['category_id'],
       where: {
         status: {
           equals: status,
           mode: 'insensitive',
         },
         regions: regionFilter,
-        date_create: dateFilter,
+        created_at: dateFilter,
       },
       _count: {
         _all: true,
       },
       orderBy: {
         _count: {
-          scaid: 'desc',
+          category_id: 'desc',
         },
       },
     });
@@ -131,22 +131,22 @@ router.get('/:regionCode/stats/details', async (req, res) => {
       });
     }
 
-    const scaids = stats.map(s => s.scaid);
+    const scaids = stats.map(s => s.category_id);
 
-    const categories = await prisma.category_systemcode.findMany({
+    const categories = await prisma.categories.findMany({
       where: {
-        scaid: { in: scaids }
+        id: { in: scaids }
       },
       select: {
-        scaid: true,
-        description_eng: true
+        id: true,
+        category_name: true
       }
     });
 
-    const categoryMap = new Map(categories.map(c => [c.scaid, c.description_eng]));
+    const categoryMap = new Map(categories.map(c => [c.id, c.category_name]));
 
     const formattedResults = stats.map(stat => ({
-      category: categoryMap.get(stat.scaid) || 'Unknown Category',
+      category_name: categoryMap.get(stat.category_id) || 'Unknown Category',
       count: Number(stat._count._all)
     }));
 

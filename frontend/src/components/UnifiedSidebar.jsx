@@ -35,11 +35,10 @@ const ShareIcon = () => (
 const TabButton = ({ text, isActive, onClick }) => (
     <button
         onClick={onClick}
-        className={`px-4 py-2 mt-2 text-sm font-medium transition-colors ${
-            isActive
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
-        }`}
+        className={`px-4 py-2 mt-2 text-sm font-medium transition-colors ${isActive
+            ? 'border-b-2 border-blue-500 text-blue-600'
+            : 'text-gray-500 hover:text-gray-700'
+            }`}
     >
         {text}
     </button>
@@ -137,7 +136,7 @@ const UnifiedSidebar = ({
             default: return null;
         }
     };
-    
+
     const getTipeAdmin = (tipe_adm) => ({ '1': 'Desa', '2': 'Kelurahan', '4': 'Kabupaten', '5': 'Kota' }[String(tipe_adm)] || 'Lainnya');
     const formatArea = (area) => !area || isNaN(Number(area)) ? 'N/A' : `${Number(area).toFixed(2)} Ha`;
 
@@ -251,7 +250,7 @@ const UnifiedSidebar = ({
             </>
         );
     };
-    
+
     const renderAdmin = () => (
         <>
             <div className="pt-20 flex-shrink-0">
@@ -296,9 +295,11 @@ const UnifiedSidebar = ({
                             key={pin.id}
                             className="bg-white border border-gray-200/80 rounded-lg p-3 shadow-sm flex flex-col gap-2 transition-shadow hover:shadow-md"
                         >
-                            <span className="font-semibold text-gray-800 text-sm truncate" title={pin.title}>
-                                {pin.title}
-                            </span>
+                            <Tooltip content={pin.title} >
+                                <span className="font-semibold text-gray-800 text-sm truncate">
+                                    {pin.title}
+                                </span>
+                            </Tooltip>
                             <div className="flex items-center justify-between mt-1">
                                 <button
                                     onClick={() => onGoToPin(pin)}
@@ -307,17 +308,18 @@ const UnifiedSidebar = ({
                                     <GoToIcon className="w-3.5 h-3.5" />
                                     Lihat di Peta
                                 </button>
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onDeletePin(pin.id);
-                                    }}
-                                    className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full"
-                                    aria-label={`Hapus ${pin.title}`}
-                                    title="Hapus Pin"
-                                >
-                                    <TrashIcon className="w-4 h-4" />
-                                </button>
+                                <Tooltip content='Hapus Pin' >
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onDeletePin(pin.id);
+                                        }}
+                                        className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full"
+                                        aria-label={`Hapus ${pin.title}`}
+                                    >
+                                        <TrashIcon className="w-4 h-4" />
+                                    </button>
+                                </Tooltip>
                             </div>
                         </div>
                     ))

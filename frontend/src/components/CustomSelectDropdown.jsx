@@ -28,7 +28,7 @@ const ChevronDownIcon = ({ disabled }) => (
  * @param {Function} props.onChange - Fungsi callback yang menerima objek event seperti `{ target: { value } }` saat sebuah opsi dipilih.
  * @returns {JSX.Element} Komponen dropdown pilihan kustom.
  */
-const CustomSelectDropdown = ({ label, placeholder, disabled = false, options, value, onChange }) => {
+const CustomSelectDropdown = ({ label, placeholder, disabled = false, options, value, onChange, className = "" }) => {
     const [isOpen, setIsOpen] = useState(false);
     const wrapperRef = useRef(null);
 
@@ -64,6 +64,7 @@ const CustomSelectDropdown = ({ label, placeholder, disabled = false, options, v
                             w-full pl-2 pr-2 py-1.5 text-sm text-left rounded-md border border-gray-300
                             bg-white grid grid-cols-1 items-center
                             ${disabled ? 'bg-gray-50 cursor-not-allowed' : 'cursor-pointer'}
+                            ${className}
                         `}
                     >
                         <span className="[grid-area:1/1] pr-6 flex items-center">

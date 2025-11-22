@@ -18,7 +18,7 @@ self.onmessage = (event) => {
 
   switch (type) {
     case 'mapChange': {
-      const { bounds, zoom, regionCode, scaid, startDate, endDate } = payload;
+      const { bounds, zoom, regionCode, categoryId, startDate, endDate } = payload;
 
       if (debounceTimeout) {
         clearTimeout(debounceTimeout);
@@ -40,8 +40,8 @@ self.onmessage = (event) => {
         if (regionCode) {
           params.append('regionCode', regionCode);
         }
-        if (scaid) {
-          params.append('scaid', scaid);
+        if (categoryId) {
+          params.append('category', categoryId);
         }
 
         if (startDate) {

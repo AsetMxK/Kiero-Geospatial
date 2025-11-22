@@ -23,7 +23,8 @@ import { getSelectionFromNames } from '../utils/name-search';
 import { findRegionByPoint } from '../utils/geoApiService';
 import { addPinToHistory, getPinHistory, removePinFromHistory, updatePinInHistory } from '../utils/pin-history';
 import { ACTION_SIDEBAR_WIDTH, REGION_INFO_SIDEBAR_WIDTH } from '../constants/layout';
-import { getInitialDateRange } from '../utils/mapUtils'
+import { getInitialDateRange, toSlug } from '../utils/mapUtils'
+import { useCategoryData } from '../hooks/useCategoryData';
 
 /**
  * Komponen halaman utama aplikasi peta.
@@ -88,6 +89,7 @@ const IframeFullMapPage = () => {
         return z ? parseInt(z, 10) : null;
     });
 
+    const { data: categories, loading: categoriesLoading } = useCategoryData();
     const { data: prefixData, loading: prefixLoading, error: prefixError } = usePrefixSearch(phoneNumberToSearch);
 
     const { data: provinsiData, loading: provinsiLoading } = useBoundaryData({ level: 'provinsi' });
@@ -122,6 +124,7 @@ const IframeFullMapPage = () => {
         }
 
         setCurrentSelection(newSelection);
+        setFabPosition(null);
     }, [provinsiData, kabkotaData, kecamatanData, kabkotaLoading, kecamatanLoading, desaLoading]);
 
     const syncViewMode = useCallback((newViewMode) => {
@@ -261,7 +264,10 @@ const IframeFullMapPage = () => {
 
     const { data: regionStats, loading: statsLoading } = useRegionStats(previewInfo?.code, dateRange);
 
-    useUrlSync(currentSelection, activePinId, categorySelection, isInitialLoadComplete, {
+    const selectedCategoryObj = categories?.find(c => c.id === categorySelection);
+    const categoryUrlValue = selectedCategoryObj ? toSlug(selectedCategoryObj.category_name) : null;
+
+    useUrlSync(currentSelection, activePinId, categoryUrlValue, isInitialLoadComplete, {
         startDate: dateRange.startDate.toISOString().split('T')[0],
         endDate: dateRange.endDate.toISOString().split('T')[0]
     });
@@ -327,9 +333,15 @@ const IframeFullMapPage = () => {
     useEffect(() => {
         const processUrlParams = async () => {
             const params = new URLSearchParams(window.location.search);
-            const categoryParam = params.get('category');
-            if (categoryParam) {
-                setCategorySelection(categoryParam);
+            const categorySlugParam = params.get('category');
+            if (!categoriesLoading && categories && categorySlugParam) {
+                const foundCategory = categories.find(cat =>
+                    toSlug(cat.category_name) === categorySlugParam
+                );
+
+                if (foundCategory) {
+                    setCategorySelection(foundCategory.id);
+                }
             }
             const nameParams = {
                 provinsi: params.get('provinsi') || undefined,
@@ -359,7 +371,7 @@ const IframeFullMapPage = () => {
         };
 
         processUrlParams();
-    }, []);
+    }, [categories, categoriesLoading]);
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -496,8 +508,9 @@ const IframeFullMapPage = () => {
         }
 
         const targetPoint = projection.fromLatLngToPoint(new window.google.maps.LatLng(target.lat, target.lng));
-        const targetZoom = zoom || mapInstance.getZoom();
-        const scale = Math.pow(2, targetZoom);
+        const currentZoom = mapInstance.getZoom();
+        const finalZoom = zoom && currentZoom < zoom ? zoom : currentZoom;
+        const scale = Math.pow(2, finalZoom);
         const newCenterPoint = new window.google.maps.Point(
             targetPoint.x - (totalOffset / scale),
             targetPoint.y
@@ -966,7 +979,13 @@ const IframeFullMapPage = () => {
                                 <SearchBar onPlaceSelect={handlePlaceSelect} />
                             </div>
                             <div className="absolute top-4 pointer-events-auto z-30" style={{ left: `calc(${ACTION_SIDEBAR_WIDTH}px + ${REGION_INFO_SIDEBAR_WIDTH}px + 2rem)` }}>
-                                <FilterPills selectedCategory={categorySelection} onCategoryChange={setCategorySelection} dateRange={dateRange} onDateRangeChange={setDateRange} />
+                                <FilterPills
+                                    selectedCategory={categorySelection}
+                                    onCategoryChange={setCategorySelection}
+                                    categoriesData={categories}
+                                    categoriesLoading={categoriesLoading}
+                                    dateRange={dateRange}
+                                    onDateRangeChange={setDateRange} />
                             </div>
                             <div className="absolute top-0 left-0 h-full pointer-events-auto flex z-20">
                                 <ActionSidebar onButtonClick={handleSidebarButtonClick} activeSidebar={activeSidebar} />

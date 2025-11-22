@@ -164,10 +164,6 @@ def perform_updates_row_by_row(cursor, tickets_to_update, all_desas, conn):
         UPDATE tickets t
         SET
             region_id = %s,
-            province = %s,
-            city = %s,
-            district = %s,
-            village = %s,
             coordinates = (
                 WITH centroid AS (
                     SELECT ST_PointOnSurface(r.geom) as pt
@@ -201,10 +197,6 @@ def perform_updates_row_by_row(cursor, tickets_to_update, all_desas, conn):
             
             # Siapkan data baru
             new_region_id = random_desa['region_id']
-            new_province = random_desa['province']
-            new_city = random_desa['city']
-            new_district = random_desa['district']
-            new_village = random_desa['village']
             # --- AKHIR LOGIKA UTAMA ---
 
             try:
@@ -212,7 +204,7 @@ def perform_updates_row_by_row(cursor, tickets_to_update, all_desas, conn):
                 cursor.execute(
                     update_query, 
                     (
-                        new_region_id, new_province, new_city, new_district, new_village,
+                        new_region_id,
                         ticket_id, new_region_id 
                     )
                 )

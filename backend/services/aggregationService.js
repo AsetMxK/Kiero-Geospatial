@@ -15,12 +15,12 @@ import { Prisma } from '@prisma/client';
  * @param {number} bounds.maxLat - Latitude maksimum.
  * @param {number} zoom - Tingkat zoom peta saat ini, digunakan untuk menentukan presisi pengklasteran.
  * @param {string} [regionCode] - Kode wilayah hierarkis opsional untuk memfilter tiket.
- * @param {string} [scaid] - ID kategori sistem opsional untuk memfilter tiket.
+ * @param {string} [category_id] - ID kategori sistem opsional untuk memfilter tiket.
  * @param {string} [startDate] - Tanggal mulai opsional (YYYY-MM-DD) untuk pemfilteran.
  * @param {string} [endDate] - Tanggal akhir opsional (YYYY-MM-DD) untuk pemfilteran.
  * @returns {Promise<Array<{count: number, lat: number, lng: number}>>} Sebuah promise yang me-resolve ke array objek kluster, masing-masing dengan jumlah dan koordinat centroid.
  */
-async function getAggregatedTickets(tx, bounds, zoom, regionCode, scaid, startDate, endDate) {
+async function getAggregatedTickets(tx, bounds, zoom, regionCode, category_id, startDate, endDate) {
   const { minLng, minLat, maxLng, maxLat } = bounds;
 
   const whereConditions = [];
@@ -47,13 +47,13 @@ async function getAggregatedTickets(tx, bounds, zoom, regionCode, scaid, startDa
     }
   }
 
-  whereConditions.push(Prisma.sql`t.scaid = ${scaid}`);
+  if (category_id) whereConditions.push(Prisma.sql`t.category_id = ${category_id}`);
 
   // Tambahkan filter rentang tanggal jika disediakan
   if (startDate && endDate) {
     const start = new Date(`${startDate}T00:00:00.000Z`);
     const end = new Date(`${endDate}T23:59:59.999Z`);
-    whereConditions.push(Prisma.sql`t.date_create BETWEEN ${start} AND ${end}`);
+    whereConditions.push(Prisma.sql`t.created_at BETWEEN ${start} AND ${end}`);
   }
 
   let precision;

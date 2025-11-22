@@ -41,8 +41,8 @@ const SelectDropdown = ({ label, placeholder, disabled = false, options, value, 
  * dan menampilkannya dalam sebuah `SelectDropdown`.
  *
  * @param {object} props - Properti komponen.
- * @param {string|undefined} props.currentSelection - `scaid` dari kategori yang saat ini dipilih.
- * @param {Function} props.onSelectionChange - Fungsi callback yang dipanggil dengan `scaid` baru saat pengguna memilih kategori yang berbeda.
+ * @param {string|undefined} props.currentSelection - `category_id` dari kategori yang saat ini dipilih.
+ * @param {Function} props.onSelectionChange - Fungsi callback yang dipanggil dengan `category_id` baru saat pengguna memilih kategori yang berbeda.
  * @returns {JSX.Element} Komponen form filter kategori.
  */
 const CategoryFilterForm = ({ currentSelection, onSelectionChange }) => {
@@ -53,18 +53,18 @@ const CategoryFilterForm = ({ currentSelection, onSelectionChange }) => {
         onSelectionChange(categoryId || undefined);
     };
 
-    const categoryOptions = categoryData.map(c => ({ value: c.scaid, name: c.description_eng }));
+    const categoryOptions = categoryData.map(c => ({ value: c.id, name: c.category_name }));
 
     return (
         <div className="w-full bg-white p-6 rounded-lg shadow-md mb-8">
             <h2 className="text-xl font-bold text-gray-800 mb-4">Filter Tiket</h2>
             <div className="flex flex-wrap gap-4">
                 <SelectDropdown 
-                    label="Scaid" 
+                    label="category_id" 
                     value={currentSelection} 
                     onChange={handleCategoryChange} 
                     options={categoryOptions} 
-                    placeholder={categoryLoading ? "Memuat..." : "-- Pilih Scaid --"} 
+                    placeholder={categoryLoading ? "Memuat..." : "-- Pilih category_id --"} 
                     disabled={categoryLoading} 
                 />
             </div>
