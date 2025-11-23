@@ -2,7 +2,6 @@ import express from 'express';
 import { Prisma } from '@prisma/client';
 import prisma from '../config/prismaClient.js';
 import authMiddleware from '../middleware/authMiddleware.js';
-import { findBestMatch } from '../utils/search.js';
 
 const router = express.Router();
 
@@ -37,15 +36,8 @@ const formatResultsToGeoJSON = (results) => {
       }
     }
 
-    const properties = {
-      level: item.level,
-      tipe_adm: item.tipe_adm,
-      nama: item.nama,
-      kode_prov: item.kode_prov,
-      kode_kab: item.kode_kab,
-      kode_kec: item.kode_kec,
-      luas: item.luas,
-    };
+    // Pisahkan geom_geojson dari properti lainnya
+    const { geom_geojson, ...properties } = item;
 
     features.push({
       type: "Feature",
@@ -92,7 +84,6 @@ const executeAndFormatGeoQuery = async (res, queryTemplate) => {
  * @returns {Promise<void>}
  */
 router.get('/provinsi', async (req, res) => {
-  // ✅ PERBAIKAN: Menggunakan SELECT DISTINCT dan menyebutkan kolom
   const query = Prisma.sql`
     SELECT DISTINCT id, level, tipe_adm, nama, kode_prov, kode_kab, kode_kec, luas, ST_AsGeoJSON(geom) as geom_geojson 
     FROM regions 
@@ -156,113 +147,193 @@ router.get('/desa/:provinceCode/:kabkotaCode/:kecamatanCode', async (req, res) =
 
 /**
  * @route GET /v1/geo/search
- * @description Mencari wilayah berdasarkan nama dalam tingkat administratif tertentu dan wilayah induk opsional.
- * Endpoint ini melakukan pencarian fuzzy dan kemudian menggunakan algoritma pencocokan kustom (`findBestMatch`)
- * untuk mengembalikan wilayah yang paling relevan.
+ * @description Mencari wilayah berdasarkan nama dengan fuzzy search (pg_trgm).
  * @access Private
- * @param {import('express').Request} req - Objek request Express.
- * @param {string} req.query.level - Tingkat administratif untuk pencarian (misalnya, 'provinsi', 'kab_kota').
- * @param {string} req.query.name - Nama wilayah yang dicari.
- * @param {string} [req.query.provinceCode] - Kode provinsi opsional untuk mempersempit pencarian.
- * @param {string} [req.query.kabkotaCode] - Kode kabupaten/kota opsional untuk mempersempit pencarian.
- * @param {string} [req.query.kecamatanCode] - Kode kecamatan opsional untuk mempersempit pencarian.
- * @param {import('express').Response} res - Objek response Express.
- * @returns {Promise<void>}
  */
 router.get('/search', async (req, res) => {
-  const { level, name, provinceCode, kabkotaCode, kecamatanCode } = req.query;
-
-  if (!level || !name) {
-    return res.status(400).json({ message: 'Query parameters "level" and "name" are required.' });
-  }
-
   try {
-    const whereClauses = [Prisma.sql`level = ${level}`];
-    if (provinceCode) whereClauses.push(Prisma.sql`kode_prov = ${provinceCode}`);
-    if (kabkotaCode) whereClauses.push(Prisma.sql`kode_kab = ${kabkotaCode}`);
-    if (kecamatanCode) whereClauses.push(Prisma.sql`kode_kec = ${kecamatanCode}`);
+    const { name, provinceCode, kabkotaCode, kecamatanCode } = req.query;
 
-    whereClauses.push(Prisma.sql`similarity(nama::text, ${name}) > 0.25`);
+    if (!name) {
+      return res.status(400).json({ message: 'Search term is required' });
+    }
+
+    const searchTerm = name.trim();
+    const searchName = '%' + searchTerm.replace(/\s+/g, '') + '%';
+
+    // Dynamic filters
+    let provFilter = Prisma.sql``;
+    if (provinceCode) {
+      provFilter = Prisma.sql`AND r.kode_prov = ${provinceCode}`;
+    }
+
+    let kabFilter = Prisma.sql``;
+    if (kabkotaCode) {
+      kabFilter = Prisma.sql`AND r.kode_kab = ${kabkotaCode}`;
+    }
+
+    let kecFilter = Prisma.sql``;
+    if (kecamatanCode) {
+      kecFilter = Prisma.sql`AND r.kode_kec = ${kecamatanCode}`;
+    }
 
     const query = Prisma.sql`
-            SELECT id, level, tipe_adm, nama, kode_prov, kode_kab, kode_kec, luas, ST_AsGeoJSON(geom) as geom_geojson 
-            FROM regions 
-            WHERE ${Prisma.join(whereClauses, ' AND ')}
-            LIMIT 100; -- Batasi jumlah kandidat untuk efisiensi
-        `;
+      SELECT r.id, r.level, r.tipe_adm, r.nama, r.kode_prov, r.kode_kab, r.kode_kec, r.luas,
+             p.nama as nama_prov, k.nama as nama_kab, k.tipe_adm as tipe_adm_kab, c.nama as nama_kec,
+             word_similarity(r.nama, ${searchTerm}) as sim_score
+      FROM regions r
+      LEFT JOIN regions p ON r.kode_prov = p.kode_prov AND p.level = 'provinsi'
+      LEFT JOIN regions k ON r.kode_prov = k.kode_prov AND r.kode_kab = k.kode_kab AND k.level = 'kab_kota'
+      LEFT JOIN regions c ON r.kode_prov = c.kode_prov AND r.kode_kab = c.kode_kab AND r.kode_kec = c.kode_kec AND c.level = 'kecamatan'
+      WHERE 1=1
+      ${provFilter}
+      ${kabFilter}
+      ${kecFilter}
+      AND (word_similarity(r.nama, ${searchTerm}) > 0.1 OR r.nama ILIKE ${searchName})
+      ORDER BY r.nama <-> ${searchTerm} ASC
+      LIMIT 5
+    `;
 
-    const candidateRegions = await prisma.$queryRaw(query);
-
-    if (candidateRegions.length === 0) {
-      return res.json({ message: "No regions found", data: [] });
-    }
-
-    const bestMatch = findBestMatch(name, candidateRegions);
-
-    if (bestMatch) {
-      const features = formatResultsToGeoJSON([bestMatch]);
-      return res.json({ message: "Best match found", data: features });
-    }
-    res.json({ message: "No suitable match found", data: [] });
+    const results = await prisma.$queryRaw(query);
+    const features = formatResultsToGeoJSON(results);
+    res.json({ data: features });
 
   } catch (error) {
-    console.error('Search query error:', error);
+    console.error('Search error:', error);
     res.locals.errorMessage = error.stack;
     res.status(500).json({ message: 'Internal server error' });
   }
 });
 
-/**
- * @route POST /v1/geo/find-by-point
- * @description Menemukan hierarki wilayah administratif untuk titik geografis tertentu (latitude dan longitude).
- * Endpoint ini melakukan query spasial untuk menemukan semua wilayah yang mencakup titik tersebut dan kemudian menyusun
- * hasilnya untuk menyediakan jalur administratif lengkap (provinsi, kabupaten, kecamatan, desa).
- * @access Private
- * @param {import('express').Request} req - Objek request Express.
- * @param {number} req.body.lat - Latitude dari titik.
- * @param {number} req.body.lng - Longitude dari titik.
- * @param {import('express').Response} res - Objek response Express.
- * @returns {Promise<void>}
- */
 router.post('/find-by-point', async (req, res) => {
-  const { lat, lng } = req.body;
-  if (lat === undefined || lng === undefined) {
-    return res.status(400).json({ message: 'Latitude and longitude are required' });
-  }
   try {
-    const results = await prisma.$queryRaw`
-      SELECT id, level, nama, tipe_adm, kode_prov, kode_kab, kode_kec 
-      FROM regions 
-      WHERE ST_Contains(geom, ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326))
-      ORDER BY level DESC
+    const { lat, lng, includeGeometry } = req.body;
+
+    if (!lat || !lng) {
+      return res.status(400).json({ message: 'Latitude and Longitude are required' });
+    }
+
+    const pointWKT = `POINT(${lng} ${lat})`;
+
+    // 1. Try to find Desa (most specific)
+    const foundDesa = await prisma.$queryRaw`
+        SELECT id, level, tipe_adm, nama, kode_prov, kode_kab, kode_kec,
+    ${includeGeometry ? Prisma.sql`ST_AsGeoJSON(geom) as geom_geojson,` : Prisma.sql``}
+  luas
+        FROM regions 
+        WHERE level = 'desa' 
+          AND ST_Contains(geom, ST_GeomFromText(${pointWKT}, 4326))
+        LIMIT 1
     `;
 
-    const adminInfo = {};
+    if (foundDesa.length > 0) {
+      const desa = foundDesa[0];
+      const kec = await prisma.regions.findFirst({ where: { level: 'kecamatan', kode_prov: desa.kode_prov, kode_kab: desa.kode_kab, kode_kec: desa.kode_kec } });
+      const kab = await prisma.regions.findFirst({ where: { level: 'kab_kota', kode_prov: desa.kode_prov, kode_kab: desa.kode_kab } });
+      const prov = await prisma.regions.findFirst({ where: { level: 'provinsi', kode_prov: desa.kode_prov } });
 
-    if (results.length > 0) {
-      const mostSpecificRegion = results.find(r => r.level === 'desa') ||
-        results.find(r => r.level === 'kecamatan') ||
-        results.find(r => r.level === 'kab_kota') ||
-        results[0];
-
-      adminInfo.kode_prov = mostSpecificRegion.kode_prov;
-      adminInfo.kode_kab = mostSpecificRegion.kode_kab;
-      adminInfo.kode_kec = mostSpecificRegion.kode_kec;
-
-      results.forEach(region => {
-        if (region.level && !adminInfo[region.level]) {
-          adminInfo[region.level] = {
-            id: region.id,
-            nama: region.nama,
-            tipe: region.tipe_adm
-          };
+      return res.json({
+        data: {
+          provinsi: { nama: prov?.nama, kode: prov?.kode_prov },
+          kab_kota: { nama: kab?.nama, kode: kab?.kode_kab, tipe: kab?.tipe_adm },
+          kecamatan: { nama: kec?.nama, kode: kec?.kode_kec },
+          desa: { nama: desa.nama, kode: null },
+          kode_prov: prov?.kode_prov,
+          kode_kab: kab?.kode_kab,
+          kode_kec: kec?.kode_kec,
+          geom_geojson: desa.geom_geojson ? JSON.parse(desa.geom_geojson) : null
         }
       });
     }
 
-    res.json({ message: "Location data retrieved successfully", data: adminInfo });
+    // 2. Try Kecamatan
+    const foundKecamatan = await prisma.$queryRaw`
+        SELECT id, level, tipe_adm, nama, kode_prov, kode_kab, kode_kec,
+    ${includeGeometry ? Prisma.sql`ST_AsGeoJSON(geom) as geom_geojson,` : Prisma.sql``}
+  luas
+        FROM regions 
+        WHERE level = 'kecamatan' 
+          AND ST_Contains(geom, ST_GeomFromText(${pointWKT}, 4326))
+        LIMIT 1
+    `;
+
+    if (foundKecamatan.length > 0) {
+      const kec = foundKecamatan[0];
+      const kab = await prisma.regions.findFirst({ where: { level: 'kab_kota', kode_prov: kec.kode_prov, kode_kab: kec.kode_kab } });
+      const prov = await prisma.regions.findFirst({ where: { level: 'provinsi', kode_prov: kec.kode_prov } });
+
+      return res.json({
+        data: {
+          provinsi: { nama: prov?.nama, kode: prov?.kode_prov },
+          kab_kota: { nama: kab?.nama, kode: kab?.kode_kab, tipe: kab?.tipe_adm },
+          kecamatan: { nama: kec.nama, kode: kec.kode_kec },
+          desa: null,
+          kode_prov: prov?.kode_prov,
+          kode_kab: kab?.kode_kab,
+          kode_kec: kec.kode_kec,
+          geom_geojson: kec.geom_geojson ? JSON.parse(kec.geom_geojson) : null
+        }
+      });
+    }
+
+    // 3. Try Kab/Kota
+    const foundKabKota = await prisma.$queryRaw`
+        SELECT id, level, tipe_adm, nama, kode_prov, kode_kab,
+    ${includeGeometry ? Prisma.sql`ST_AsGeoJSON(geom) as geom_geojson,` : Prisma.sql``}
+  luas
+        FROM regions 
+        WHERE level = 'kab_kota' 
+          AND ST_Contains(geom, ST_GeomFromText(${pointWKT}, 4326))
+        LIMIT 1
+    `;
+
+    if (foundKabKota.length > 0) {
+      const kab = foundKabKota[0];
+      const prov = await prisma.regions.findFirst({ where: { level: 'provinsi', kode_prov: kab.kode_prov } });
+
+      return res.json({
+        data: {
+          provinsi: { nama: prov?.nama, kode: prov?.kode_prov },
+          kab_kota: { nama: kab.nama, kode: kab.kode_kab, tipe: kab.tipe_adm },
+          kecamatan: null,
+          desa: null,
+          kode_prov: prov?.kode_prov,
+          kode_kab: kab.kode_kab,
+          geom_geojson: kab.geom_geojson ? JSON.parse(kab.geom_geojson) : null
+        }
+      });
+    }
+
+    // 4. Try Provinsi
+    const foundProvinsi = await prisma.$queryRaw`
+        SELECT id, level, tipe_adm, nama, kode_prov,
+    ${includeGeometry ? Prisma.sql`ST_AsGeoJSON(geom) as geom_geojson,` : Prisma.sql``}
+  luas
+        FROM regions 
+        WHERE level = 'provinsi' 
+          AND ST_Contains(geom, ST_GeomFromText(${pointWKT}, 4326))
+        LIMIT 1
+    `;
+
+    if (foundProvinsi.length > 0) {
+      const prov = foundProvinsi[0];
+      return res.json({
+        data: {
+          provinsi: { nama: prov.nama, kode: prov.kode_prov },
+          kab_kota: null,
+          kecamatan: null,
+          desa: null,
+          kode_prov: prov.kode_prov,
+          geom_geojson: prov.geom_geojson ? JSON.parse(prov.geom_geojson) : null
+        }
+      });
+    }
+
+    // Nothing found
+    res.json({ data: null });
+
   } catch (error) {
-    console.error('Find by point error:', error);
+    console.error('Error finding region by point:', error);
     res.locals.errorMessage = error.stack;
     res.status(500).json({ message: 'Internal server error' });
   }

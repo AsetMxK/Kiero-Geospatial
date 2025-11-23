@@ -46,10 +46,8 @@ export const useTicketsData = (regionCode, categoryId, mapViewMode, startDate, e
             const now = Date.now();
 
             if (cachedEntry && (now - cachedEntry.timestamp < TICKETS_DATA_CACHE_DURATION_MS)) {
-              console.log("CACHE HIT:", apiPath);
               worker.postMessage({ type: 'dataFetched', payload: cachedEntry.data });
             } else {
-              console.log("CACHE MISS:", apiPath);
               setIsLoading(true);
               setError(null);
               const responseJson = await getMapDataFromWorker(payload.apiPath);

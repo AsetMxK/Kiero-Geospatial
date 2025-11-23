@@ -74,13 +74,17 @@ export async function getDesa(provinceCode, kabkotaCode, kecamatanCode) {
  * @param {string} params.name - Nama wilayah yang dicari.
  * @param {string} [params.provinceCode] - Kode provinsi untuk memfilter.
  * @param {string} [params.kabkotaCode] - Kode kab/kota untuk memfilter.
+ * @param {string} [params.kecamatanCode] - Kode kecamatan untuk memfilter.
+ * @param {boolean} [params.includeGeometry] - Apakah menyertakan geometri.
  * @returns {Promise<object|null>} Promise yang me-resolve ke fitur GeoJSON wilayah yang ditemukan, atau null jika tidak ada yang cocok.
  * @throws {Error} Jika permintaan API gagal.
  */
-export const searchRegionByName = async ({ level, name, provinceCode, kabkotaCode }) => {
+export const searchRegionByName = async ({ level, name, provinceCode, kabkotaCode, kecamatanCode, includeGeometry }) => {
     const query = new URLSearchParams({ level, name });
     if (provinceCode) query.append('provinceCode', provinceCode);
     if (kabkotaCode) query.append('kabkotaCode', kabkotaCode);
+    if (kecamatanCode) query.append('kecamatanCode', kecamatanCode);
+    if (includeGeometry !== undefined) query.append('includeGeometry', includeGeometry);
 
     const response = await fetchAuthenticated(`/v1/geo/search?${query.toString()}`);
     if (!response.ok) {
@@ -96,17 +100,18 @@ export const searchRegionByName = async ({ level, name, provinceCode, kabkotaCod
  * @async
  * @param {number} lat - Latitude.
  * @param {number} lng - Longitude.
+ * @param {boolean} [includeGeometry=false] - Whether to include GeoJSON geometry in the response.
  * @returns {Promise<object>} Promise yang me-resolve ke objek yang berisi informasi administrasi wilayah.
  * @throws {Error} Jika permintaan API gagal atau terjadi kesalahan lain.
  */
-export const findRegionByPoint = async (lat, lng) => {
+export const findRegionByPoint = async (lat, lng, includeGeometry = false) => {
     try {
         const response = await fetchAuthenticated('/v1/geo/find-by-point', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ lat, lng }),
+            body: JSON.stringify({ lat, lng, includeGeometry }),
         });
 
         if (!response.ok) {
@@ -120,4 +125,19 @@ export const findRegionByPoint = async (lat, lng) => {
         console.error('Gagal mengambil data dari /find-by-point:', error);
         throw error;
     }
+};
+
+/**
+ * Melakukan pencarian umum untuk SearchBar.
+ * @async
+ * @param {string} query - Kata kunci pencarian.
+ * @returns {Promise<Array<object>>} Promise yang me-resolve ke array hasil pencarian.
+ */
+export const searchRegions = async (query) => {
+    const response = await fetchAuthenticated(`/v1/geo/search?name=${encodeURIComponent(query)}&includeGeometry=false`);
+    if (!response.ok) {
+        throw new Error('Gagal melakukan pencarian wilayah');
+    }
+    const result = await response.json();
+    return result.data || [];
 };

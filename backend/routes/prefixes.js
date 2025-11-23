@@ -25,14 +25,16 @@ router.get('/search', async (req, res, next) => {
     }
     const result = await searchPrefixes(number);
     res.json({
-        "matchedPrefix": result.matchedPrefix,
-        "coverage": {
-            "regions": result.regions,
-            "geoJson": result.geoJson
-        }
+      "matchedPrefix": result.matchedPrefix,
+      "coverage": {
+        "regions": result.regions,
+        "geoJson": result.geoJson
+      }
     });
   } catch (error) {
-    next(error);
+    console.error('Error finding region by prefixes:', error);
+    res.locals.errorMessage = error.stack;
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 

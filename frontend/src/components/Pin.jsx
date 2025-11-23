@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { AdvancedMarker, InfoWindow, useAdvancedMarkerRef, useMapsLibrary } from '@vis.gl/react-google-maps';
 import Tooltip from './Tooltip';
@@ -57,22 +56,43 @@ const PinTitleEditor = ({ initialTitle, onSave }) => {
  * @param { object } props.pin - Objek data pin yang berisi`id`, `lat`, `lng`, `title`, dan`adminInfo`.
  * @param { Function } props.onDelete - Fungsi callback untuk menghapus pin, dipanggil dengan`pin.id`.
  * @param { Function } props.onUpdateTitle - Fungsi callback untuk memperbarui judul pin, dipanggil dengan `pin.id` dan judul baru.
+ * @param { Function } props.onUpdatePin - Fungsi callback untuk memperbarui properti pin lainnya (misal: address).
  * @param { boolean } props.isActive - Apakah pin ini sedang aktif(dipilih).
  * @param { Function } props.onSelect - Fungsi callback untuk menangani pemilihan / pembatalan pilihan pin.
  * @param { boolean } props.isNewlyCreated - Bendera untuk menunjukkan apakah pin ini baru saja dibuat, untuk memicu animasi masuk.
  * @param { string } [props.actionType = 'copy'] - 'copy' untuk menyalin info, 'select' untuk mengirim postMessage.
- * @returns { JSX.Element } Komponen Pin.
  */
-const Pin = ({ pin, onDelete, onUpdateTitle, isActive, onSelect, isNewlyCreated, actionType = 'copy' }) => {
-    const [markerRef, marker] = useAdvancedMarkerRef();
+const Pin = ({ pin, onDelete, onUpdateTitle, onUpdatePin, isActive, onSelect, isNewlyCreated, actionType = 'copy' }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [isActionSuccess, setIsActionSuccess] = useState(false);
+    const [markerRef, marker] = useAdvancedMarkerRef();
+    const [animationClass, setAnimationClass] = useState('');
     const [isInfoWindowVisible, setIsInfoWindowVisible] = useState(false);
-
-    const geocodingLib = useMapsLibrary('geocoding');
-    const [address, setAddress] = useState(null);
+    const [address, setAddress] = useState(pin.address || null);
     const [isLoadingAddress, setIsLoadingAddress] = useState(false);
+    const geocodingLib = useMapsLibrary('geocoding');
+    const hasSentCreatedMessage = useRef(false);
 
+    // Efek untuk animasi masuk saat pin baru dibuat
+    useEffect(() => {
+        if (isNewlyCreated) {
+            setAnimationClass('animate-bounce-in');
+            const timer = setTimeout(() => setAnimationClass(''), 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [isNewlyCreated]);
+
+    // Efek untuk menampilkan InfoWindow saat pin aktif
+    useEffect(() => {
+        if (isActive) {
+            setIsInfoWindowVisible(true);
+        } else {
+            setIsInfoWindowVisible(false);
+            setIsEditing(false); // Reset mode edit saat ditutup
+        }
+    }, [isActive]);
+
+    // Efek untuk mengambil alamat saat pin aktif
     useEffect(() => {
         if (!geocodingLib || !isActive || address) return;
 
@@ -80,61 +100,38 @@ const Pin = ({ pin, onDelete, onUpdateTitle, isActive, onSelect, isNewlyCreated,
         const geocoder = new geocodingLib.Geocoder();
         geocoder.geocode({ location: { lat: pin.lat, lng: pin.lng } }, (results, status) => {
             if (status === 'OK' && results[0]) {
-                // Prioritize results that contain street address information
                 const preferredResult = results.find(r =>
                     r.types.includes('street_address') ||
                     r.types.includes('route') ||
                     r.types.includes('premise')
                 ) || results[0];
 
-                setAddress(preferredResult.formatted_address);
+                const newAddress = preferredResult.formatted_address;
+                setAddress(newAddress);
+                if (onUpdatePin) {
+                    onUpdatePin(pin.id, { address: newAddress });
+                }
             } else {
                 setAddress('Alamat tidak ditemukan');
             }
             setIsLoadingAddress(false);
         });
-    }, [geocodingLib, isActive, pin.lat, pin.lng, address]);
+    }, [geocodingLib, isActive, pin.lat, pin.lng, address, onUpdatePin, pin.id]);
 
-    const [runPulse, setRunPulse] = useState(false);
-    const prevIsActive = useRef(isActive);
-
+    // Efek untuk mengirim pesan pinCreated (hanya sekali per pin instance)
     useEffect(() => {
-        if (isActive && !prevIsActive.current && !isNewlyCreated) {
-            setRunPulse(true);
-            const timer = setTimeout(() => setRunPulse(false), 400);
-            return () => clearTimeout(timer);
+        // Pastikan address sudah ada DAN adminInfo sudah selesai dimuat (isLoadingAdminInfo === false)
+        if (isNewlyCreated && address && pin.isLoadingAdminInfo === false && !hasSentCreatedMessage.current) {
+            const pinWithAddress = { ...pin, address };
+            window.parent.postMessage({
+                source: 'mapIframeApp',
+                type: 'pinCreated',
+                payload: pinWithAddress
+            }, '*');
+            hasSentCreatedMessage.current = true;
         }
-        prevIsActive.current = isActive;
-    }, [isActive, isNewlyCreated]);
+    }, [isNewlyCreated, address, pin, pin.isLoadingAdminInfo]);
 
-    useEffect(() => {
-        if (isActive) {
-            if (isNewlyCreated) {
-                const timer = setTimeout(() => {
-                    setIsInfoWindowVisible(true);
-                }, 500);
-                return () => clearTimeout(timer);
-            } else {
-                setIsInfoWindowVisible(true);
-            }
-        } else {
-            setIsInfoWindowVisible(false);
-        }
-    }, [isActive, isNewlyCreated]);
-
-
-    useEffect(() => {
-        if (!isActive) {
-            setIsEditing(false);
-            setIsActionSuccess(false);
-        }
-    }, [isActive]);
-
-    const animationClass = isNewlyCreated
-        ? 'animate-drop-in'
-        : runPulse
-            ? 'animate-pulse'
-            : '';
 
     const handleDelete = useCallback(() => onDelete(pin.id), [pin.id, onDelete]);
 
@@ -370,8 +367,8 @@ const Pin = ({ pin, onDelete, onUpdateTitle, isActive, onSelect, isNewlyCreated,
                                 </Tooltip>
                             </div>
                         </div>
-                    </div>
-                </InfoWindow>
+                    </div >
+                </InfoWindow >
             )}
         </>
     );

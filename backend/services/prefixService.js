@@ -1,6 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../config/prismaClient.js';
 
 /**
  * Menemukan awalan nomor telepon terpanjang yang cocok di database untuk nomor telepon yang diberikan.

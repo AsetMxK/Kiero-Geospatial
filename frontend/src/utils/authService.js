@@ -18,7 +18,6 @@ export async function authenticateApp() {
     if (!CLIENT_ID) {
         throw new Error('VITE_CLIENT_ID tidak ditemukan di variabel lingkungan frontend.');
     }
-    console.log('Memulai autentikasi awal...');
     try {
         const response = await axios.post(PROXY_TOKEN_ENDPOINT, {
             clientId: CLIENT_ID
@@ -31,7 +30,6 @@ export async function authenticateApp() {
 
         const tokenData = response.data;
         storeTokens(tokenData.access_token, tokenData.refresh_token);
-        console.log('Autentikasi awal berhasil, token disimpan di sessionStorage.');
 
     } catch (error) {
         console.error('Error selama autentikasi awal:', error);
@@ -54,7 +52,6 @@ export async function authenticateWithAssertion(assertion) {
     if (!assertion) {
         throw new Error('JWT Assertion is required for iframe authentication.');
     }
-    console.log('Memulai autentikasi iframe dengan assertion...');
     try {
         const response = await axios.post(PROXY_TOKEN_ENDPOINT, {
             assertion
@@ -67,7 +64,6 @@ export async function authenticateWithAssertion(assertion) {
 
         const tokenData = response.data;
         storeTokens(tokenData.access_token, tokenData.refresh_token);
-        console.log('Autentikasi iframe berhasil, token disimpan di sessionStorage.');
     } catch (error) {
         console.error('Error selama autentikasi assertion:', error);
         clearStoredTokens();

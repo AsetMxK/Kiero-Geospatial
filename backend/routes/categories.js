@@ -9,7 +9,7 @@ router.use(authMiddleware);
 const serializeBigInt = (data) => {
   return JSON.parse(
     JSON.stringify(data, (key, value) => {
-      if (typeof value === 'bigint'){
+      if (typeof value === 'bigint') {
         return value.toString();
       }
       return value;

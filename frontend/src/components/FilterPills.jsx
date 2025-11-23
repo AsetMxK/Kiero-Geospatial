@@ -9,7 +9,6 @@ import {
 } from '@floating-ui/react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { useCategoryData } from '../hooks/useCategoryData';
 import CustomSelectDropdown from './CustomSelectDropdown';
 import DateRangePicker from './DateRangePicker';
 import KategoriIcon from './icons/KategoriIcon';

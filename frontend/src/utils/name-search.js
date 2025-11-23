@@ -19,7 +19,7 @@ export const getSelectionFromNames = async (nameParams) => {
     if (!nameParams.provinsi) return selection;
 
     const provFeature = await searchRegionByName({ level: 'provinsi', name: nameParams.provinsi });
-    if (!provFeature?.properties.kode_prov) {
+    if (!provFeature?.properties?.kode_prov) {
         throw new Error(`Provinsi "${nameParams.provinsi}" tidak ditemukan.`);
     }
     selection.provinceCode = provFeature.properties.kode_prov;
@@ -31,7 +31,7 @@ export const getSelectionFromNames = async (nameParams) => {
         name: nameParams.kabkota,
         provinceCode: selection.provinceCode,
     });
-    if (!kabkotaFeature?.properties.kode_kab) {
+    if (!kabkotaFeature?.properties?.kode_kab) {
         throw new Error(`Kabupaten/Kota "${nameParams.kabkota}" tidak ditemukan di ${selection.provinceName}.`);
     }
     selection.kabkotaCode = kabkotaFeature.properties.kode_kab;
@@ -44,20 +44,21 @@ export const getSelectionFromNames = async (nameParams) => {
         provinceCode: selection.provinceCode,
         kabkotaCode: selection.kabkotaCode,
     });
-    if (!kecamatanFeature?.properties.kode_kec) {
+    if (!kecamatanFeature?.properties?.kode_kec) {
         throw new Error(`Kecamatan "${nameParams.kecamatan}" tidak ditemukan di ${selection.kabkotaName}.`);
     }
     selection.kecamatanCode = kecamatanFeature.properties.kode_kec;
     selection.kecamatanName = kecamatanFeature.properties.nama;
     if (!nameParams.desakel) return selection;
-    
+
     const desaFeature = await searchRegionByName({
         level: 'desa',
         name: nameParams.desakel,
         provinceCode: selection.provinceCode,
         kabkotaCode: selection.kabkotaCode,
+        kecamatanCode: selection.kecamatanCode,
     });
-    if (!desaFeature?.properties.nama) {
+    if (!desaFeature?.properties?.nama) {
         throw new Error(`Desa/Kelurahan "${nameParams.desakel}" tidak ditemukan di Kec. ${selection.kecamatanName}.`);
     }
     selection.desaName = desaFeature.properties.nama;

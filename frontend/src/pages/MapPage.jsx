@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { APIProvider, InfoWindow } from '@vis.gl/react-google-maps';
 import screenfull from 'screenfull';
 import MapComponent from '../components/MapComponent';
@@ -18,12 +18,14 @@ import { useBoundaryData } from '../hooks/useBoundaryData';
 import { useTicketsData, useTicketDetails } from '../hooks/useTicketsData';
 import { useRegionStats } from '../hooks/useRegionStats';
 import { useUrlSync } from '../hooks/useUrlSync';
-import { getSelectionFromNames } from '../utils/name-search';
-import { findRegionByPoint } from '../utils/geoApiService';
+import { useRegionResolver } from '../hooks/useRegionResolver';
+import { useRegionByPointFetcher } from '../hooks/useRegionByPoint';
 import { addPinToHistory, getPinHistory, removePinFromHistory, updatePinInHistory } from '../utils/pin-history';
 import { ACTION_SIDEBAR_WIDTH, REGION_INFO_SIDEBAR_WIDTH } from '../constants/layout';
 import { getInitialDateRange, toSlug } from '../utils/mapUtils'
 import { useCategoryData } from '../hooks/useCategoryData';
+
+const MAP_LIBRARIES = ['places', 'geometry', 'geocoding'];
 
 /**
  * Komponen halaman utama aplikasi peta.
@@ -35,6 +37,7 @@ import { useCategoryData } from '../hooks/useCategoryData';
  */
 const MapPage = () => {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    const { fetchRegionByPoint } = useRegionByPointFetcher();
 
     const [mapInstance, setMapInstance] = useState(null);
     const [isFullscreen, setIsFullscreen] = useState(screenfull.isFullscreen);
@@ -227,48 +230,47 @@ const MapPage = () => {
         }
     };
 
+    const params = new URLSearchParams(window.location.search);
+    const nameParams = useMemo(() => ({
+        provinsi: params.get('provinsi') || undefined,
+        kabkota: params.get('kabkota') || undefined,
+        kecamatan: params.get('kecamatan') || undefined,
+        desakel: params.get('desakel') || undefined,
+    }), []); // Run once on mount
+
+    const { data: resolvedSelection, isLoading: isResolving, error: resolveError } = useRegionResolver(nameParams);
+
     useEffect(() => {
-        const processUrlParams = async () => {
+        if (isResolving) {
+            setIsLoading(true);
+            setLoadingText('Mencari wilayah dari tautan...');
+        }
+    }, [isResolving]);
+
+    useEffect(() => {
+        if (!nameParams.provinsi) {
+            setIsInitialLoadComplete(true);
+            return;
+        }
+
+        if (resolvedSelection) {
+            setCurrentSelection(resolvedSelection);
+            setActiveSidebar('regionInfo');
+            navigationHistory.current = [{ selection: resolvedSelection, viewMode: 'region-only' }];
+
             const params = new URLSearchParams(window.location.search);
-            const categorySlugParam = params.get('category');
-            if (!categoriesLoading && categories && categorySlugParam) {
-                const foundCategory = categories.find(cat =>
-                    toSlug(cat.category_name) === categorySlugParam
-                );
+            ['provinsi', 'kabkota', 'kecamatan', 'desakel'].forEach(p => params.delete(p));
+            const newUrl = `${window.location.pathname}?${params.toString()}`;
+            window.history.replaceState({}, '', newUrl);
 
-                if (foundCategory) {
-                    setCategorySelection(foundCategory.id);
-                }
-            }
-            const nameParams = {
-                provinsi: params.get('provinsi') || undefined,
-                kabkota: params.get('kabkota') || undefined,
-                kecamatan: params.get('kecamatan') || undefined,
-                desakel: params.get('desakel') || undefined,
-            };
-
-            try {
-                if (nameParams.provinsi) {
-                    setIsLoading(true);
-                    setLoadingText('Mencari wilayah dari tautan...');
-                    const selection = await getSelectionFromNames(nameParams);
-                    setCurrentSelection(selection);
-                    setActiveSidebar('regionInfo'); // Open sidebar to region info on load from URL
-                    navigationHistory.current = [{ selection, viewMode: 'region-only' }];
-                    ['provinsi', 'kabkota', 'kecamatan', 'desakel'].forEach(p => params.delete(p));
-                    const newUrl = `${window.location.pathname}?${params.toString()}`;
-                    window.history.replaceState({}, '', newUrl);
-                }
-            } catch (error) {
-                setUrlError(error.message);
-            } finally {
-                setIsLoading(false);
-                setIsInitialLoadComplete(true);
-            }
-        };
-
-        processUrlParams();
-    }, [categories, categoriesLoading]);
+            setIsLoading(false);
+            setIsInitialLoadComplete(true);
+        } else if (resolveError) {
+            setUrlError(resolveError.message);
+            setIsLoading(false);
+            setIsInitialLoadComplete(true);
+        }
+    }, [resolvedSelection, resolveError, nameParams]);
 
     const { data: provinsiData, loading: provinsiLoading } = useBoundaryData({ level: 'provinsi' });
     const { data: kabkotaData, loading: kabkotaLoading } = useBoundaryData({ level: 'kabkota', provinceCode: currentSelection.provinceCode });
@@ -307,13 +309,12 @@ const MapPage = () => {
 
     const findAdminInfoForPoint = useCallback(async (lat, lng) => {
         try {
-            const data = await findRegionByPoint(lat, lng);
-            return data;
+            return await fetchRegionByPoint(lat, lng);
         } catch (error) {
             console.error("Gagal mencari info wilayah berdasarkan titik:", error);
             return null;
         }
-    }, []);
+    }, [fetchRegionByPoint]);
 
     useEffect(() => {
         const fetchAdminInfoForPins = async () => {
@@ -346,7 +347,7 @@ const MapPage = () => {
         if (mapInstance) {
             fetchAdminInfoForPins();
         }
-    }, [pins.length, mapInstance, findAdminInfoForPoint]);
+    }, [pins, mapInstance, findAdminInfoForPoint, newlyCreatedPinId]);
 
     useEffect(() => {
         if (!rawInfoData) {
@@ -656,8 +657,8 @@ const MapPage = () => {
         setActiveTicketId(null);
     }, []);
 
-    const handlePlaceSelect = useCallback(async (place) => {
-        if (!place || !place.geometry || !place.geometry.location) {
+    const handlePlaceSelect = useCallback(async (placeOrFeature) => {
+        if (!placeOrFeature) {
             setSearchError("Hasil pencarian tidak valid. Silakan coba lagi.");
             return;
         }
@@ -665,58 +666,103 @@ const MapPage = () => {
         setLoadingText('Menganalisis lokasi...');
 
         try {
-            const placeTypes = place.types || [];
-            const ADMIN_TYPES = new Set(['administrative_area_level_1', 'administrative_area_level_2', 'administrative_area_level_3', 'administrative_area_level_4', 'locality', 'sublocality']);
-            const isAdministrative = placeTypes.some(type => ADMIN_TYPES.has(type));
+            // CASE 1: Local Region Selection (GeoJSON Feature)
+            if (placeOrFeature.type === 'Feature') {
+                const { properties, geometry } = placeOrFeature;
+                const { level, kode_prov, kode_kab, kode_kec, nama } = properties;
 
-            if (isAdministrative) {
-                const nameParams = {};
-                const componentMapping = {
-                    'administrative_area_level_1': 'provinsi',
-                    'administrative_area_level_2': 'kabkota',
-                    'administrative_area_level_3': 'kecamatan',
-                    'administrative_area_level_4': 'desakel',
-                };
-                place.address_components.forEach(comp => {
-                    const type = comp.types.find(t => componentMapping[t]);
-                    if (type) {
-                        const prefixes = /^(Kecamatan|Kota|Kabupaten|Provinsi)\s/i;
-                        const normalizedName = comp.long_name.replace(prefixes, '');
-                        nameParams[componentMapping[type]] = normalizedName;
-                    }
-                });
-                if (Object.keys(nameParams).length === 0 && place.name) {
-                    nameParams.provinsi = place.name;
+                // Construct selection based on level
+                let newSelection = {};
+                if (level === 'provinsi') {
+                    newSelection = { provinceCode: kode_prov };
+                } else if (level === 'kabkota' || level === 'kab_kota') {
+                    newSelection = { provinceCode: kode_prov, kabkotaCode: kode_kab };
+                } else if (level === 'kecamatan') {
+                    newSelection = { provinceCode: kode_prov, kabkotaCode: kode_kab, kecamatanCode: kode_kec };
+                } else if (level === 'desa') {
+                    newSelection = { provinceCode: kode_prov, kabkotaCode: kode_kab, kecamatanCode: kode_kec, desaName: nama };
                 }
-                if (Object.keys(nameParams).length > 0) {
-                    const selection = await getSelectionFromNames(nameParams);
-                    handleSelectionChange(selection);
+
+                if (Object.keys(newSelection).length > 0) {
+                    handleSelectionChange(newSelection);
                     syncViewMode('region-only');
-                    setActiveSidebar('regionInfo');
-                    navigationHistory.current.push({ selection, viewMode: 'region-only' });
+                    navigationHistory.current.push({ selection: newSelection, viewMode: 'region-only' });
+
+                    // If it's a desa, open the sidebar
+                    if (level === 'desa') {
+                        setActiveSidebar('regionInfo');
+                        setIsSidebarHidden(false);
+                    }
+
+                    // Use geometry to fit bounds if available
+                    if (geometry && mapInstance) {
+                        const bounds = new window.google.maps.LatLngBounds();
+                        const processCoords = (coords) => {
+                            if (Array.isArray(coords) && coords.length === 2 && typeof coords[0] === 'number') {
+                                bounds.extend({ lat: coords[1], lng: coords[0] });
+                            } else if (Array.isArray(coords)) {
+                                coords.forEach(processCoords);
+                            }
+                        };
+
+                        if (geometry.type === 'Polygon' || geometry.type === 'MultiPolygon') {
+                            processCoords(geometry.coordinates);
+                        }
+
+                        if (!bounds.isEmpty()) {
+                            mapInstance.fitBounds(bounds);
+                            // Optional: Adjust zoom slightly if needed, or let fitBounds handle it
+                        }
+                    }
+                }
+                return;
+            }
+
+            // CASE 2: Google Place Selection (POI)
+            const place = placeOrFeature;
+            let lat, lng;
+            if (place.geometry && place.geometry.location) {
+                if (typeof place.geometry.location.lat === 'function') {
+                    lat = place.geometry.location.lat();
+                    lng = place.geometry.location.lng();
                 } else {
-                    throw new Error("Tidak dapat mengurai nama wilayah dari hasil pencarian.");
+                    // Fallback if it's already a plain object
+                    lat = place.geometry.location.lat;
+                    lng = place.geometry.location.lng;
                 }
             } else {
-                const location = place.geometry.location;
-                const adminInfo = await findRegionByPoint(location.lat(), location.lng());
-                if (!adminInfo?.kode_prov) {
-                    throw new Error("Tidak dapat menemukan data wilayah administratif untuk lokasi ini.");
-                }
+                throw new Error("Lokasi tidak ditemukan untuk tempat ini.");
+            }
+
+            const adminInfo = await fetchRegionByPoint(lat, lng, true);
+
+            if (adminInfo && adminInfo.geom_geojson) {
                 const newSelection = {
                     provinceCode: adminInfo.kode_prov || null,
                     kabkotaCode: adminInfo.kode_kab || null,
                     kecamatanCode: adminInfo.kode_kec || null,
-                    desaName: adminInfo.desa.nama || null,
-                    provinceName: adminInfo.provinsi.nama || null,
-                    kabkotaName: adminInfo.kab_kota.nama || null,
-                    kecamatanName: adminInfo.kecamatan.nama || null,
+                    desaName: adminInfo.desa?.nama || null,
+                    provinceName: adminInfo.provinsi?.nama || null,
+                    kabkotaName: adminInfo.kab_kota?.nama || null,
+                    kecamatanName: adminInfo.kecamatan?.nama || null,
                 };
+
                 handleSelectionChange(newSelection);
                 syncViewMode('region-only');
-                setActiveSidebar('regionInfo');
                 navigationHistory.current.push({ selection: newSelection, viewMode: 'region-only' });
+
+                if (adminInfo.desa?.nama) {
+                    setActiveSidebar('regionInfo');
+                    setIsSidebarHidden(false);
+                }
+
+            } else {
+                // No region found (e.g. outside Indonesia or data missing), just fly to point
+                setPanToTarget({ lat, lng, zoom: 17 });
+                // Optionally add a marker or temporary pin
+                setSearchError("Lokasi berada di luar wilayah administratif yang terdata.");
             }
+
         } catch (error) {
             console.error("Gagal memproses hasil pencarian:", error);
             setSearchError(error.message || "Terjadi kesalahan saat memproses lokasi.");
@@ -759,6 +805,19 @@ const MapPage = () => {
         setPanToTarget({ lat: newPinWithId.lat, lng: newPinWithId.lng, zoom: 15 });
     };
 
+    const handleUpdatePin = (id, updates) => {
+        setPins(currentPins => {
+            const updatedPins = currentPins.map(pin =>
+                pin.id === id ? { ...pin, ...updates } : pin
+            );
+            const updatedPin = updatedPins.find(p => p.id === id);
+            if (updatedPin) {
+                updatePinInHistory(updatedPin);
+            }
+            return updatedPins;
+        });
+    };
+
     const handleDeletePin = (id) => {
         removePinFromHistory(id);
         setPins(prevPins => prevPins.filter(p => p.id !== id));
@@ -766,12 +825,7 @@ const MapPage = () => {
     };
 
     const handleUpdatePinTitle = (id, newTitle) => {
-        const pinToUpdate = pins.find(p => p.id === id);
-        if (pinToUpdate) {
-            const updatedPin = { ...pinToUpdate, title: newTitle };
-            updatePinInHistory(updatedPin);
-            setPins(prevPins => prevPins.map(p => (p.id === id ? updatedPin : p)));
-        }
+        handleUpdatePin(id, { title: newTitle });
     };
 
     const handleGoToPin = (pin) => {
@@ -836,7 +890,7 @@ const MapPage = () => {
     };
 
     return (
-        <APIProvider apiKey={apiKey} libraries={['places', 'geometry']} language="id">
+        <APIProvider apiKey={apiKey} libraries={MAP_LIBRARIES} language="id">
             {urlError && <ErrorModal message={urlError} onClose={() => setUrlError(null)} />}
             {searchError && <ErrorModal message={searchError} onClose={() => setSearchError(null)} />}
             <main ref={mainContainerRef} className="relative w-screen h-screen bg-gray-100 flex">
@@ -859,6 +913,7 @@ const MapPage = () => {
                             pins={pins}
                             onDeletePin={handleDeletePin}
                             onUpdatePinTitle={handleUpdatePinTitle}
+                            onUpdatePin={handleUpdatePin}
                             activePinId={activePinId}
                             onActivePinChange={handleActivePinChange}
                             newlyCreatedPinId={newlyCreatedPinId}

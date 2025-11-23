@@ -58,7 +58,9 @@ const MapComponent = ({
     onAddPin = () => { },
     pins = [],
     onDeletePin = () => { },
+
     onUpdatePinTitle = () => { },
+    onUpdatePin = () => { },
     activePinId,
     onActivePinChange = () => { },
     pinActionType,
@@ -268,6 +270,7 @@ const MapComponent = ({
                         pin={pin}
                         onDelete={onDeletePin}
                         onUpdateTitle={onUpdatePinTitle}
+                        onUpdatePin={onUpdatePin}
                         actionType={pinActionType}
                         isActive={isActive}
                         onSelect={handleSelect}

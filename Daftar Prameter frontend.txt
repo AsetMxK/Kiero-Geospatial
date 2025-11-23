@@ -9,6 +9,9 @@ Daftar Prameter frontend:
 	startDate (editable)
 	endDate (editable)
 	zoom (editable)
+	share_lat (editable)
+	share_lng (editable)
+	share_title (editable)
 
 http://localhost:5173/mendawai-geospatial/?startDate=2025-06-01&endDate=2025-06-01&category=8a&view_mode=region-only&provinsi=DKI+Jakarta&kabkota=Kota+Adm.+Jakarta+Pusat&kecamatan=Senen&desakel=Kramat
 Penggunan:
@@ -40,7 +43,9 @@ Penggunan:
 
 4. zoom = untuk mengoveride zoom bawaan aplikasi (nilai yang direkomendasikan 12-17)
 
-
+5. share_lat, share_lng, share_title = untuk membuat pin yang dibagikan,
+contoh: 
+	share_lat=-6.662787435333991&share_lng=111.46868102396945&share_title=Point+of+Interest
 
 
 parent ke iframe (action)

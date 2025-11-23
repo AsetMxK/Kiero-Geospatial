@@ -101,7 +101,7 @@ const CombinedCategoryTable = ({ data, isLoading, isError }) => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                     {data.map((item) => (
-                        <tr key={item.category}>
+                        <tr key={item.category_name}>
                             <td className="px-4 py-2 whitespace-normal text-sm text-gray-700">{item.category_name}</td>
                             <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 font-medium text-right">{item.count}</td>
                         </tr>
