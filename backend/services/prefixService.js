@@ -81,7 +81,7 @@ export async function searchPrefixes(phoneNumber) {
       )
     ) as "geoJson"
     FROM (
-      SELECT ST_Union(geom) as unioned_geom
+      SELECT ST_Union(ST_MakeValid(geom)) as unioned_geom
       FROM regions
       WHERE id = ANY(${regionIds})
     ) AS sub
