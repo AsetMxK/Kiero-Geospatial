@@ -38,27 +38,27 @@ export async function searchPrefixes(phoneNumber) {
 
   if (!matchedPrefix) {
     return {
-        matchedPrefix: null,
-        regions: [],
-        geoJson: {
-            "type": "FeatureCollection",
-            "features": []
-        }
+      matchedPrefix: null,
+      regions: [],
+      geoJson: {
+        "type": "FeatureCollection",
+        "features": []
+      }
     };
   }
 
   const prefixRegions = await prisma.phone_prefix_regions.findMany({
     where: { phone_prefix_id: matchedPrefix.id },
     include: {
-      region: true,
+      regions: true,
     },
   });
 
   const regionIds = prefixRegions.map(pr => pr.region_id);
   const regions = prefixRegions.map(pr => ({
-    name: pr.region.nama,
-    code: pr.region.kode_kab || pr.region.kode_prov,
-    level: pr.region.level,
+    name: pr.regions.nama,
+    code: pr.regions.kode_kab || pr.regions.kode_prov,
+    level: pr.regions.level,
   }));
 
   if (regionIds.length === 0) {
