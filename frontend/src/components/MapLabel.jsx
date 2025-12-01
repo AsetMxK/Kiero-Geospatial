@@ -13,12 +13,12 @@ import { useEffect, useRef } from 'react';
  * @param {string} [props.color='#1f2937'] - Warna teks label.
  * @returns {null} Komponen ini tidak me-render output apa pun.
  */
-const MapLabel = ({ position, text, color = '#1f2937' }) => {
+const MapLabel = ({ position, text, color = '#1f2937', isHovered = false }) => {
   const map = useMap();
   const maps = useMapsLibrary('maps');
   const overlayViewRef = useRef(null);
-  const divRef = useRef(null);
 
+  // Effect to create and manage the overlay
   useEffect(() => {
     if (!map || !maps) return;
 
@@ -29,6 +29,7 @@ const MapLabel = ({ position, text, color = '#1f2937' }) => {
         this.pos = pos;
         this.content = content;
         this.clr = clr;
+        this.hovered = false; // Initial state
       }
 
       onAdd() {
@@ -36,13 +37,22 @@ const MapLabel = ({ position, text, color = '#1f2937' }) => {
         this.div.style.position = 'absolute';
         this.div.style.whiteSpace = 'nowrap';
         this.div.style.transform = 'translate(-50%, -50%)';
-        this.div.style.color = '#000';
-        this.div.style.fontSize = '21px';
-        this.div.style.fontWeight = '700';
+
+        // Modern Styling
+        this.div.style.color = '#374151';
+        this.div.style.fontFamily = 'Inter, system-ui, sans-serif';
+        this.div.style.fontSize = '14px';
+        this.div.style.fontWeight = '600';
         this.div.style.pointerEvents = 'none';
+
+        // Natural white halo (stacked blurs for solid contrast without hard edges)
         this.div.style.textShadow = '1px 1px 0px #FFF, -1px -1px 0px #FFF, 1px -1px 0px #FFF, -1px 1px 0px #FFF, 0px 0px 4px #FFF';
+
+        // Transitions - ONLY animate specific properties
+        this.div.style.transition = 'font-size 0.2s ease-in-out, font-weight 0.2s ease-in-out, z-index 0.2s ease-in-out';
+        this.div.style.zIndex = 'auto';
+
         this.div.innerHTML = this.content;
-        divRef.current = this.div;
 
         const panes = this.getPanes();
         panes?.overlayMouseTarget.appendChild(this.div);
@@ -63,18 +73,36 @@ const MapLabel = ({ position, text, color = '#1f2937' }) => {
         if (this.div) {
           this.div.parentNode?.removeChild(this.div);
           this.div = null;
-          divRef.current = null;
+        }
+      }
+
+      updateStyle(hovered) {
+        this.hovered = hovered;
+        if (this.div) {
+          this.div.style.fontSize = hovered ? '16px' : '14px';
+          this.div.style.fontWeight = hovered ? '800' : '600';
+          this.div.style.zIndex = hovered ? '1000' : 'auto';
         }
       }
     }
 
-    overlayViewRef.current = new CustomOverlay(position, text, color);
-    overlayViewRef.current.setMap(map);
+    // Create overlay
+    const overlay = new CustomOverlay(position, text, color);
+    overlay.setMap(map);
+    overlayViewRef.current = overlay;
 
     return () => {
-      overlayViewRef.current?.setMap(null);
+      overlay.setMap(null);
+      overlayViewRef.current = null;
     };
-  }, [map, maps, position, text, color]);
+  }, [map, maps, position, text, color]); // Re-create only if these change
+
+  // Effect to update style on hover change
+  useEffect(() => {
+    if (overlayViewRef.current) {
+      overlayViewRef.current.updateStyle(isHovered);
+    }
+  }, [isHovered]);
 
   return null;
 };

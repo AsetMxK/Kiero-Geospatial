@@ -19,8 +19,12 @@ const SidebarToggleButton = ({ isOpen, onClick, position = 'left' }) => {
         right: 'right-full',
     };
     const roundedClasses = {
-        left: 'rounded-r-lg',
-        right: 'rounded-l-lg',
+        left: 'rounded-tr-xl rounded-br-xl',
+        right: 'rounded-tl-xl rounded-bl-xl',
+    };
+    const borderClasses = {
+        left: 'border-y border-r border-l-0',
+        right: 'border-y border-l border-r-0',
     };
 
     return (
@@ -30,7 +34,15 @@ const SidebarToggleButton = ({ isOpen, onClick, position = 'left' }) => {
             <Tooltip content={tooltipContent}>
                 <div
                     onClick={onClick}
-                    className={`w-10 h-12 bg-white ${roundedClasses[position]} shadow-md flex items-center justify-center cursor-pointer pointer-events-auto`}
+                    className={`
+                        w-8 h-16 bg-white 
+                        ${roundedClasses[position]} 
+                        ${borderClasses[position]}
+                        border-gray-100
+                        shadow-md hover:shadow-lg
+                        flex items-center justify-center cursor-pointer pointer-events-auto 
+                        text-gray-400 hover:text-blue-600 transition-all duration-200
+                    `}
                 >
                     <ChevronIcon isOpen={isOpen} />
                 </div>

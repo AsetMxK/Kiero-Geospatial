@@ -15,11 +15,11 @@ import Tooltip from './Tooltip';
  */
 const FloatingActionButtons = ({ onShowInfo, onShowSubRegions, canDrillDown }) => {
   return (
-    <div className="flex gap-2 p-1 bg-white rounded-full shadow-lg">
+    <div className="flex gap-2 p-1.5 bg-white rounded-full shadow-xl border border-gray-100 animate-in fade-in slide-in-from-bottom-4 duration-300">
       <Tooltip content="Tampilkan Info Wilayah">
         <button
           onClick={onShowInfo}
-          className="bg-gray-100 p-2 rounded-full hover:bg-gray-200 transition flex items-center justify-center"
+          className="bg-gray-50 p-2.5 rounded-full hover:bg-blue-50 hover:text-blue-600 transition-colors duration-200 flex items-center justify-center text-gray-600"
         >
           <InfoIcon />
         </button>
@@ -28,7 +28,7 @@ const FloatingActionButtons = ({ onShowInfo, onShowSubRegions, canDrillDown }) =
         <Tooltip content="Tampilkan Sub-wilayah">
           <button
             onClick={onShowSubRegions}
-            className="bg-gray-100 p-2 rounded-full hover:bg-gray-200 transition flex items-center justify-center"
+            className="bg-gray-50 p-2.5 rounded-full hover:bg-blue-50 hover:text-blue-600 transition-colors duration-200 flex items-center justify-center text-gray-600"
           >
             <SitemapIcon />
           </button>

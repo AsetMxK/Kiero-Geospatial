@@ -35,12 +35,15 @@ const ShareIcon = () => (
 const TabButton = ({ text, isActive, onClick }) => (
     <button
         onClick={onClick}
-        className={`px-4 py-2 mt-2 text-sm font-medium transition-colors ${isActive
-            ? 'border-b-2 border-blue-500 text-blue-600'
-            : 'text-gray-500 hover:text-gray-700'
-            }`}
+        className={`
+            relative px-4 py-3 text-sm font-medium transition-all duration-200
+            ${isActive ? 'text-blue-600' : 'text-gray-500 hover:text-gray-800'}
+        `}
     >
         {text}
+        {isActive && (
+            <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 rounded-t-full animate-in fade-in zoom-in-x duration-200" />
+        )}
     </button>
 );
 
@@ -78,6 +81,8 @@ const UnifiedSidebar = ({
     pins,
     onGoToPin,
     onDeletePin,
+    mapLayer,
+    onMapLayerChange,
 }) => {
     const [activeAdminTab, setActiveAdminTab] = useState('admin');
     const [activeRegionInfoTab, setActiveRegionInfoTab] = useState('stats');
@@ -328,6 +333,42 @@ const UnifiedSidebar = ({
         </>
     );
 
+    const renderLayers = () => (
+        <>
+            <div className="p-4 border-b flex justify-between items-center pt-20">
+                <h2 className="text-lg font-bold text-gray-800">Tampilan Peta</h2>
+            </div>
+            <div className="p-4 space-y-3">
+                {[
+                    { id: 'default', label: 'Default', description: 'Tampilan peta standar' },
+                    { id: 'satellite', label: 'Satelit', description: 'Citra satelit' },
+                    { id: 'streetview', label: 'Street View', description: 'Jelajahi jalanan' }
+                ].map((layer) => (
+                    <button
+                        key={layer.id}
+                        onClick={() => onMapLayerChange(layer.id)}
+                        className={`w-full text-left p-3 rounded-lg border transition-all duration-200 ${mapLayer === layer.id
+                            ? 'bg-blue-50 border-blue-200 ring-1 ring-blue-200'
+                            : 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                            }`}
+                    >
+                        <div className="flex items-center justify-between">
+                            <span className={`font-medium ${mapLayer === layer.id ? 'text-blue-700' : 'text-gray-700'}`}>
+                                {layer.label}
+                            </span>
+                            {mapLayer === layer.id && (
+                                <div className="w-2 h-2 rounded-full bg-blue-600"></div>
+                            )}
+                        </div>
+                        <p className={`text-xs mt-1 ${mapLayer === layer.id ? 'text-blue-600' : 'text-gray-500'}`}>
+                            {layer.description}
+                        </p>
+                    </button>
+                ))}
+            </div>
+        </>
+    );
+
     if (!isOpen) {
         return null;
     }
@@ -340,6 +381,8 @@ const UnifiedSidebar = ({
                 return renderRegionInfo();
             case 'history':
                 return renderHistory();
+            case 'layers':
+                return renderLayers();
             default:
                 return null;
         }
@@ -347,7 +390,7 @@ const UnifiedSidebar = ({
 
     return (
         <div
-            className={`absolute top-0 left-0 transition-transform duration-300 ease-in-out shadow-lg h-full bg-white flex flex-col ${!isHidden ? 'translate-x-0' : '-translate-x-full'}`}
+            className={`absolute top-0 left-0 transition-transform duration-300 ease-in-out shadow-xl h-full bg-white flex flex-col border-r border-gray-100 ${!isHidden ? 'translate-x-0' : '-translate-x-full'}`}
             style={{ width: REGION_INFO_SIDEBAR_WIDTH }}
         >
             {renderContent()}

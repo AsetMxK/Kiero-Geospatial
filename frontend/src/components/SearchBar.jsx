@@ -86,6 +86,7 @@ const SearchBar = ({ onPlaceSelect }) => {
     local: localPredictions,
     google: googlePredictions
   }), [localPredictions, googlePredictions]);
+
   const allPredictions = useMemo(() => [
     ...predictions.local,
     ...predictions.google
@@ -140,16 +141,18 @@ const SearchBar = ({ onPlaceSelect }) => {
   // Reset highlighted index when predictions change
   useEffect(() => {
     setHighlightedIndex(-1);
-  }, [predictions]);
+  }, [predictions, isOpen]);
 
   useEffect(() => {
-    if (highlightedIndex >= 0 && itemRefs.current[highlightedIndex]) {
-      itemRefs.current[highlightedIndex].scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest',
+    if (isOpen && highlightedIndex >= 0 && itemRefs.current[highlightedIndex]) {
+      requestAnimationFrame(() => {
+        itemRefs.current[highlightedIndex]?.scrollIntoView({
+          inline: 'nearest',
+          block: 'nearest',
+        });
       });
     }
-  }, [highlightedIndex]);
+  }, [highlightedIndex, isOpen]);
 
   const handleKeyDown = (e) => {
     if (!isOpen || allPredictions.length === 0) return;
@@ -210,7 +213,7 @@ const SearchBar = ({ onPlaceSelect }) => {
       </div>
 
       {isOpen && (predictions.local.length > 0 || predictions.google.length > 0) && (
-        <div ref={dropdownRef} className="absolute w-full mt-2 bg-white rounded-lg shadow-xl max-h-[60vh] overflow-y-auto z-50 border border-gray-100">
+        <div ref={dropdownRef} className="absolute w-full mt-2 bg-white rounded-lg shadow-xl max-h-[60vh] overflow-y-auto custom-scrollbar z-50 border border-gray-100 py-1 scroll-p-1">
           {predictions.local.length > 0 && (
             <div className="py-2">
               <div className="px-4 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50">
@@ -262,7 +265,7 @@ const SearchBar = ({ onPlaceSelect }) => {
                     key={`local-${index}`}
                     ref={(el) => (itemRefs.current[index] = el)}
                     onClick={() => handleLocalSelect(item)}
-                    className={`w-full text-left px-4 py-2.5 transition-colors border-b border-gray-50 last:border-0 ${isHighlighted ? 'bg-blue-50' : 'hover:bg-blue-50'}`}
+                    className={`w-full text-left px-4 py-2.5 border-b border-gray-50 last:border-0 ${isHighlighted ? 'bg-blue-50' : 'hover:bg-blue-50'}`}
                   >
                     <div className="font-medium text-gray-800 text-sm">{item.properties.nama}</div>
                     <div className="text-xs text-gray-500 mt-0.5 capitalize">
@@ -287,7 +290,7 @@ const SearchBar = ({ onPlaceSelect }) => {
                     key={item.place_id}
                     ref={(el) => (itemRefs.current[globalIndex] = el)}
                     onClick={() => handleGoogleSelect(item)}
-                    className={`w-full text-left px-4 py-2.5 transition-colors border-b border-gray-50 last:border-0 ${isHighlighted ? 'bg-blue-50' : 'hover:bg-blue-50'}`}
+                    className={`w-full text-left px-4 py-2.5 border-b border-gray-50 last:border-0 ${isHighlighted ? 'bg-blue-50' : 'hover:bg-blue-50'}`}
                   >
                     <div className="font-medium text-gray-800 text-sm">{item.structured_formatting.main_text}</div>
                     <div className="text-xs text-gray-500 mt-0.5">{item.structured_formatting.secondary_text}</div>

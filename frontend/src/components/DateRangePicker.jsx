@@ -134,9 +134,13 @@ const DateRangePicker = ({ dateRange, onDateRangeChange }) => {
                 ref={buttonRef}
                 type="button"
                 onClick={handleToggle}
-                className="w-full pl-3 pr-10 py-2 text-left bg-white border border-gray-300 rounded-md shadow-sm cursor-pointer focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 text-sm"
+                className={`
+                    w-full pl-3 pr-10 py-2.5 text-left bg-white border border-gray-200 rounded-xl shadow-sm 
+                    cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 
+                    text-sm text-gray-700 hover:border-blue-400 transition-all duration-200
+                `}
             >
-                <span className="truncate">{formattedDate}</span>
+                <span className="truncate font-medium">{formattedDate}</span>
             </button>
             {renderPopup()}
         </div>

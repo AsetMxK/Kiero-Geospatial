@@ -1,27 +1,5 @@
 import { useBoundaryData } from '../hooks/useBoundaryData';
-
-const SelectDropdown = ({ label, placeholder, disabled = false, options, value, onChange }) => {
-    const selectId = `select-form-${label.replace(/\s+/g, '-')}`;
-    return (
-        <div className="flex-1 min-w-[200px]">
-            <label htmlFor={selectId} className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-            <select
-                id={selectId}
-                disabled={disabled}
-                value={value || ""}
-                onChange={onChange}
-                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-            >
-                <option value="">{placeholder}</option>
-                {options.filter(item => item && item.name).sort((a, b) => a.name.localeCompare(b.name)).map((opt, index) => (
-                    <option key={`${opt.value}-${index}`} value={opt.value}>
-                        {opt.name}
-                    </option>
-                ))}
-            </select>
-        </div>
-    );
-};
+import CustomSelectDropdown from './CustomSelectDropdown';
 
 /**
  * Komponen form yang menyediakan serangkaian dropdown bertingkat untuk memfilter
@@ -92,13 +70,44 @@ const RegionFilterForm = ({ currentSelection, onSelectionChange }) => {
         : [];
 
     return (
-        <div className="w-full bg-white p-6 rounded-lg shadow-md mb-8">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Filter Wilayah</h2>
-            <div className="flex flex-wrap gap-4">
-                <SelectDropdown label="Provinsi" value={currentSelection.provinceCode} onChange={handleProvinceChange} options={provinceOptions} placeholder={provinsiLoading ? "Memuat..." : "-- Pilih Provinsi --"} disabled={provinsiLoading} />
-                <SelectDropdown label="Kabupaten/Kota" value={currentSelection.kabkotaCode} onChange={handleKabkotaChange} options={kabkotaOptions} placeholder={kabkotaLoading ? "Memuat..." : "-- Pilih Kab/Kota --"} disabled={!currentSelection.provinceCode || kabkotaLoading} />
-                <SelectDropdown label="Kecamatan" value={currentSelection.kecamatanCode} onChange={handleKecamatanChange} options={kecamatanOptions} placeholder={kecamatanLoading ? "Memuat..." : "-- Pilih Kecamatan --"} disabled={!currentSelection.kabkotaCode || kecamatanLoading} />
-                <SelectDropdown label="Desa/Kelurahan" value={currentSelection.desaName} onChange={handleDesaChange} options={desaOptions} placeholder={desaLoading ? "Memuat..." : "-- Pilih Desa/Kelurahan --"} disabled={!currentSelection.kecamatanCode || desaLoading} />
+        <div className="w-full bg-white p-6 rounded-xl shadow-lg border border-gray-100 mb-8 transition-shadow hover:shadow-xl">
+            <div className="flex items-center gap-2 mb-5">
+                <div className="w-1 h-6 bg-blue-500 rounded-full"></div>
+                <h2 className="text-xl font-bold text-gray-900">Filter Wilayah</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <CustomSelectDropdown
+                    label="Provinsi"
+                    value={currentSelection.provinceCode}
+                    onChange={handleProvinceChange}
+                    options={provinceOptions}
+                    placeholder={provinsiLoading ? "Memuat..." : "-- Pilih Provinsi --"}
+                    disabled={provinsiLoading}
+                />
+                <CustomSelectDropdown
+                    label="Kabupaten/Kota"
+                    value={currentSelection.kabkotaCode}
+                    onChange={handleKabkotaChange}
+                    options={kabkotaOptions}
+                    placeholder={kabkotaLoading ? "Memuat..." : "-- Pilih Kab/Kota --"}
+                    disabled={!currentSelection.provinceCode || kabkotaLoading}
+                />
+                <CustomSelectDropdown
+                    label="Kecamatan"
+                    value={currentSelection.kecamatanCode}
+                    onChange={handleKecamatanChange}
+                    options={kecamatanOptions}
+                    placeholder={kecamatanLoading ? "Memuat..." : "-- Pilih Kecamatan --"}
+                    disabled={!currentSelection.kabkotaCode || kecamatanLoading}
+                />
+                <CustomSelectDropdown
+                    label="Desa/Kelurahan"
+                    value={currentSelection.desaName}
+                    onChange={handleDesaChange}
+                    options={desaOptions}
+                    placeholder={desaLoading ? "Memuat..." : "-- Pilih Desa/Kelurahan --"}
+                    disabled={!currentSelection.kecamatanCode || desaLoading}
+                />
             </div>
         </div>
     );

@@ -7,41 +7,45 @@ import { TICKET_STATUSES } from '../constants/ticketStatus';
  * Komponen tombol filter berbentuk "pil" untuk status tiket.
  *
  * @param {object} props - Properti komponen.
- * @param {string} props.label - Teks yang akan ditampilkan pada pil.
- * @param {string} props.statusKey - Kunci status (misalnya, 'open', 'closed') yang direpresentasikan oleh pil.
- * @param {boolean} props.isChecked - Apakah pil ini sedang dalam keadaan terpilih/aktif.
- * @param {Function} props.onChange - Fungsi callback yang akan dipanggil saat pil diklik.
- * @returns {JSX.Element} Komponen pil filter.
+ * @param {string} props.label - Label status.
+ * @param {string} props.statusKey - Kunci status.
+ * @param {boolean} props.isChecked - Apakah filter ini aktif.
+ * @param {Function} props.onChange - Fungsi callback ketika filter diubah.
+ * @returns {JSX.Element} Komponen tombol filter.
  */
 const StatusFilterPill = ({ label, statusKey, isChecked, onChange }) => {
-    const color = getStatusColorHsl(statusKey);
+    const colorString = getStatusColorHsl(statusKey);
+    const match = colorString.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+
+    const h = match ? match[1] : 0;
+    const s = match ? match[2] : 0;
+    const l = match ? match[3] : 0;
+    
+    const colorStyle = {
+        '--pill-color': `hsl(${h}, ${s}%, ${l}%)`,
+        '--pill-bg': `hsl(${h}, ${s}%, 95%)`,
+        '--pill-border': `hsl(${h}, ${s}%, ${l}%)`,
+    };
+
     return (
-        <label
-            htmlFor={`filter-${statusKey}`}
+        <button
+            onClick={() => onChange(statusKey)}
+            style={colorStyle}
             className={`
-                px-3 py-1.5 rounded-full text-sm font-medium cursor-pointer transition-all
+                px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 border
                 ${isChecked
-                    ? 'text-white shadow-sm'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-[var(--pill-color)] text-white border-[var(--pill-border)] shadow-md transform scale-105'
+                    : 'bg-white text-gray-600 border-gray-200 hover:border-[var(--pill-border)] hover:text-[var(--pill-color)] hover:bg-[var(--pill-bg)]'
                 }
             `}
-            style={{ backgroundColor: isChecked ? color : undefined }}
         >
-            <input
-                id={`filter-${statusKey}`}
-                type="checkbox"
-                checked={isChecked}
-                onChange={() => onChange(statusKey)}
-                className="sr-only"
-            />
-            <span className="capitalize">{label}</span>
-        </label>
+            {label}
+        </button>
     );
 };
 
 /**
- * Komponen tabel yang menampilkan rincian statistik tiket berdasarkan kategori.
- * Menangani status pemuatan, status kesalahan, dan kasus di mana tidak ada data untuk ditampilkan.
+ * Komponen tabel untuk menampilkan data kategori gabungan.
  *
  * @param {object} props - Properti komponen.
  * @param {Array<object>} props.data - Array data statistik kategori yang akan ditampilkan.

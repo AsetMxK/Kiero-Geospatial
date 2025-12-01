@@ -74,10 +74,12 @@ const MapComponent = ({
     activeTicketDetails,
     isTicketDetailLoading,
     ticketDetailError,
-    forcedZoom = null
+    forcedZoom = null,
+    mapLayer = 'default'
 }) => {
     const map = useMap();
     const [labels, setLabels] = useState([]);
+    const [hoveredRegionId, setHoveredRegionId] = useState(null);
 
     useEffect(() => {
         if (map && onMapLoad) {
@@ -121,7 +123,10 @@ const MapComponent = ({
                     masterBounds.union(bounds);
 
                     if (labelProperty && featureData.properties?.[labelProperty]) {
-                        const uniqueKey = String(featureData.properties.id || `${labelProperty}-${Math.random()}`);
+                        // Ensure ID matches what map.data uses (feature.getId())
+                        const featureId = feature.getId();
+                        const uniqueKey = String(featureId || featureData.properties.id || `${labelProperty}-${Math.random()}`);
+
                         newLabels.push({
                             id: uniqueKey,
                             position: bounds.getCenter(),
@@ -208,6 +213,26 @@ const MapComponent = ({
         });
     }, [map, isPinningMode, isBoundaryTransparent]);
 
+    useEffect(() => {
+        if (!map) return;
+        let coverageLayer = null;
+
+        if (mapLayer === 'streetview') {
+            if (window.google && window.google.maps && window.google.maps.StreetViewCoverageLayer) {
+                coverageLayer = new window.google.maps.StreetViewCoverageLayer();
+                coverageLayer.setMap(map);
+            } else {
+                console.error('MapComponent: google.maps.StreetViewCoverageLayer not available');
+            }
+        }
+
+        return () => {
+            if (coverageLayer) {
+                coverageLayer.setMap(null);
+            }
+        };
+    }, [map, mapLayer]);
+
 
     useEffect(() => {
         if (!map) return;
@@ -216,11 +241,15 @@ const MapComponent = ({
             const originalStyle = e.feature.getProperty('originalStyle');
             map.data.overrideStyle(e.feature, { ...originalStyle, fillOpacity: 0.8, zIndex: 100 });
             hoveredFeatureRef.current = e.feature;
+
+            const featureId = e.feature.getId() || e.feature.getProperty('id');
+            setHoveredRegionId(String(featureId));
         });
         const mouseoutListener = map.data.addListener('mouseout', () => {
             if (hoveredFeatureRef.current) {
                 map.data.overrideStyle(hoveredFeatureRef.current, hoveredFeatureRef.current.getProperty('originalStyle'));
                 hoveredFeatureRef.current = null;
+                setHoveredRegionId(null);
             }
         });
         const clickListener = map.data.addListener('click', (e) => {
@@ -254,12 +283,19 @@ const MapComponent = ({
                 mapId={import.meta.env.VITE_GOOGLE_MAPS_MAP_ID || "e9f5b765b262e391"}
                 mapTypeControl={false}
                 streetViewControl={false}
+                mapTypeId={mapLayer === 'satellite' ? 'satellite' : 'roadmap'}
                 fullscreenControl={false}
                 zoomControl={false}
                 className="h-full w-full"
             />
             {labels.map(label => (
-                <MapLabel key={label.id} position={label.position} text={label.text} color={label.color} />
+                <MapLabel
+                    key={label.id}
+                    position={label.position}
+                    text={label.text}
+                    color={label.color}
+                    isHovered={label.id === hoveredRegionId}
+                />
             ))}
             {pins.map(pin => {
                 const isActive = pin.id === activePinId;

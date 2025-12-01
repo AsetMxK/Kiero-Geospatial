@@ -37,20 +37,20 @@ const Statistics = ({ regionCode, dateRange }) => {
 
     return (
         <>
-            <h4 className="text-lg font-semibold mb-3 text-gray-800">Ringkasan Tiket</h4>
+            <h4 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-3">Ringkasan Tiket</h4>
 
-            <div className="mb-4 text-center p-3 bg-gray-50 rounded-lg border">
-                <p className="text-4xl font-bold text-gray-700">{total}</p>
-                <p className="text-sm text-gray-500">Total Tiket</p>
+            <div className="mb-4 text-center p-4 bg-white rounded-xl shadow-sm border border-gray-100">
+                <p className="text-4xl font-bold text-gray-800">{total}</p>
+                <p className="text-xs font-medium text-gray-500 mt-1 uppercase tracking-wide">Total Tiket</p>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="grid grid-cols-3 gap-3 text-center">
                 {statusKeys.map((statusName) => (
-                    <div key={statusName} className="p-2 bg-white rounded-lg">
-                        <p className="text-2xl font-bold" style={{ color: getStatusColorHsl(statusName) }}>
+                    <div key={statusName} className="p-3 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center">
+                        <p className="text-xl font-bold" style={{ color: getStatusColorHsl(statusName) }}>
                             {statusCounts[statusName]}
                         </p>
-                        <p className="text-xs text-gray-500 capitalize">{statusName}</p>
+                        <p className="text-[10px] font-semibold text-gray-400 uppercase mt-1">{statusName}</p>
                     </div>
                 ))}
             </div>

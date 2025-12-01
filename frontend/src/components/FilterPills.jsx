@@ -74,7 +74,7 @@ const FilterPills = ({
     const categories = categoriesData || [];
     const loading = categoriesLoading;
 
-    const categoryOptions = categories? categories.map(cat => ({
+    const categoryOptions = categories ? categories.map(cat => ({
         value: cat.id,
         name: `${cat.category_name}`
     })) : [];
@@ -95,7 +95,13 @@ const FilterPills = ({
                 <button
                     ref={categoryRefs.setReference}
                     {...getCategoryReferenceProps()}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full shadow-md text-sm transition-colors ${selectedCategory ? 'bg-blue-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'}`}
+                    className={`
+                        flex items-center gap-2 px-4 py-2 rounded-full shadow-sm border text-sm font-medium transition-all duration-200
+                        ${selectedCategory
+                            ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-md'
+                            : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                        }
+                    `}
                 >
                     <KategoriIcon className="w-4 h-4" />
                     <span>{selectedCategory ? (categories.find(c => c.id === selectedCategory)?.category_name || 'Kategori Terpilih') : 'Semua Kategori'}</span>
@@ -107,15 +113,15 @@ const FilterPills = ({
                             style={categoryFloatingStyles}
                             {...getCategoryFloatingProps()}
                         >
-                            <div className="p-2 bg-white rounded-md shadow-lg border border-gray-200">
-                                 <CustomSelectDropdown
+                            <div className="p-2 bg-white rounded-xl shadow-xl border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
+                                <CustomSelectDropdown
                                     label="Kategori"
                                     value={selectedCategory}
                                     onChange={handleCategoryChange}
                                     options={categoryOptions}
                                     placeholder={loading ? "Memuat..." : "-- Pilih Kategori --"}
                                     disabled={loading}
-                                    className="min-w-[150px] max-w-[200px]"
+                                    className="min-w-[200px] max-w-[200px]"
                                 />
                             </div>
                         </div>
@@ -128,14 +134,20 @@ const FilterPills = ({
                 <button
                     ref={dateRefs.setReference}
                     {...getDateReferenceProps()}
-                     className={`flex items-center gap-2 px-3 py-1.5 rounded-full shadow-md text-sm transition-colors ${!isDateDefault ? 'bg-blue-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'}`}
+                    className={`
+                        flex items-center gap-2 px-4 py-2 rounded-full shadow-sm border text-sm font-medium transition-all duration-200
+                        ${!isDateDefault
+                            ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-md'
+                            : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                        }
+                     `}
                 >
                     <CalendarIcon className="w-4 h-4" />
                     <span>{isDateDefault ? '30 Hari Terakhir' : `${formattedStartDate} - ${formattedEndDate}`}</span>
                 </button>
                 <FloatingPortal>
                     {isDateOpen && (
-                        <div 
+                        <div
                             ref={dateRefs.setFloating}
                             style={dateFloatingStyles}
                             {...getDateFloatingProps()}

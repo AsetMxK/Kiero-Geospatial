@@ -87,6 +87,7 @@ const MapPage = () => {
         const z = params.get('zoom');
         return z ? parseInt(z, 10) : null;
     });
+    const [mapLayer, setMapLayer] = useState('default');
 
     const { data: categories, loading: categoriesLoading } = useCategoryData();
 
@@ -873,7 +874,7 @@ const MapPage = () => {
         return <div className="w-screen h-screen flex items-center justify-center">API Key untuk Google Maps tidak ditemukan.</div>;
     }
 
-    const isUnifiedSidebarOpen = activeSidebar === 'wilayah' || activeSidebar === 'regionInfo' || activeSidebar === 'history';
+    const isUnifiedSidebarOpen = activeSidebar === 'wilayah' || activeSidebar === 'regionInfo' || activeSidebar === 'history' || activeSidebar === 'layers';
     const layerButtonOffset = isUnifiedSidebarOpen && !isSidebarHidden ? REGION_INFO_SIDEBAR_WIDTH : 0;
 
     const getSidebarView = () => {
@@ -884,6 +885,8 @@ const MapPage = () => {
                 return 'regionInfo';
             case 'history':
                 return 'history';
+            case 'layers':
+                return 'layers';
             default:
                 return 'admin'; // Default view
         }
@@ -926,6 +929,7 @@ const MapPage = () => {
                             isTicketDetailLoading={isTicketDetailLoading}
                             ticketDetailError={ticketDetailError}
                             forcedZoom={urlZoom}
+                            mapLayer={mapLayer}
                         />
                         {previewInfo && <RegionPreviewInfoWindow position={previewInfo.position} regionName={previewInfo.name} stats={regionStats} loading={statsLoading} onClose={() => setPreviewInfo(null)} onNavigate={() => handleNavigateToRegion(previewInfo.featureProps)} />}
                         {fabPosition && <InfoWindow position={fabPosition} onCloseClick={() => setFabPosition(null)}> <FloatingActionButtons onShowInfo={() => { setActiveSidebar('regionInfo'); setIsSidebarHidden(false); setFabPosition(null); }} onShowSubRegions={() => { syncViewMode('drill-down'); const newSelection = { ...currentSelection }; setCurrentSelection(newSelection); navigationHistory.current.push({ selection: newSelection, viewMode: 'drill-down' }); setFabPosition(null); setActiveSidebar(null); }} canDrillDown={!currentSelection.desaName} /> </InfoWindow>}
@@ -964,6 +968,8 @@ const MapPage = () => {
                                         pins={pins}
                                         onGoToPin={handleGoToPin}
                                         onDeletePin={handleDeletePin}
+                                        mapLayer={mapLayer}
+                                        onMapLayerChange={setMapLayer}
                                     />
                                 </div>
                             </div>
@@ -972,7 +978,7 @@ const MapPage = () => {
                             <>
                                 <div className="absolute bottom-4 z-10 flex flex-col gap-2 pointer-events-auto transition-all duration-300 ease-in-out" style={{ left: `calc(${ACTION_SIDEBAR_WIDTH}px + ${layerButtonOffset}px + 1rem)` }}>
                                     <Tooltip content={isBoundaryTransparent ? 'Tampilkan Batas Wilayah' : 'Sembunyikan Batas Wilayah'}>
-                                        <button onClick={toggleBoundaryTransparency} className={`bg-white p-2 rounded-full shadow-md hover:bg-gray-100 transition flex items-center justify-center ${isBoundaryTransparent ? 'bg-blue-100 ring-2 ring-blue-500' : ''}`}>
+                                        <button onClick={toggleBoundaryTransparency} className={`p-2.5 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center ${isBoundaryTransparent ? 'bg-blue-50 text-blue-600 ring-2 ring-blue-600' : 'bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`}>
                                             <LayerIcon />
                                         </button>
                                     </Tooltip>
