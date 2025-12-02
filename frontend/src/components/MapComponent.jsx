@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Map, useMap } from '@vis.gl/react-google-maps';
 import { useBoundaryData } from '../hooks/useBoundaryData';
 import { stringToHslColor } from '../utils/mapUtils';
@@ -75,11 +75,16 @@ const MapComponent = ({
     isTicketDetailLoading,
     ticketDetailError,
     forcedZoom = null,
-    mapLayer = 'default'
+    mapLayer = 'default',
+    onStreetViewVisibilityChange = () => { },
+    isStreetViewLayerActive = false,
+    onStreetViewUpdate = () => { },
+    children
 }) => {
     const map = useMap();
     const [labels, setLabels] = useState([]);
     const [hoveredRegionId, setHoveredRegionId] = useState(null);
+    const [previewPano, setPreviewPano] = useState(null);
 
     useEffect(() => {
         if (map && onMapLoad) {
@@ -206,32 +211,136 @@ const MapComponent = ({
         map.data.forEach((feature) => {
             const originalStyle = feature.getProperty('originalStyle');
             if (originalStyle) {
-                const isInteractive = !isPinningMode && !isBoundaryTransparent;
-                const newOpacity = isBoundaryTransparent ? 0.1 : originalStyle.fillOpacity;
+                const isStreetView = mapLayer === 'streetview' || isStreetViewLayerActive;
+                const isInteractive = !isPinningMode && !isBoundaryTransparent && !isStreetView;
+                const newOpacity = (isBoundaryTransparent || isStreetView) ? 0.1 : originalStyle.fillOpacity;
                 map.data.overrideStyle(feature, { ...originalStyle, clickable: isInteractive, fillOpacity: newOpacity, });
             }
         });
-    }, [map, isPinningMode, isBoundaryTransparent]);
+    }, [map, isPinningMode, isBoundaryTransparent, mapLayer, isStreetViewLayerActive]);
 
     useEffect(() => {
         if (!map) return;
         let coverageLayer = null;
+        let clickListener = null;
+        let dragListener = null;
+        let zoomListener = null;
+        const streetView = map.getStreetView();
+        const svService = new google.maps.StreetViewService();
 
-        if (mapLayer === 'streetview') {
+        // Disable specific native controls (Address and Close Button) but keep Compass/Zoom
+        streetView.setOptions({
+            disableDefaultUI: false,
+            addressControl: false,
+            enableCloseButton: false
+        });
+
+        const handleVisibilityChange = () => {
+            const isVisible = streetView.getVisible();
+            if (onStreetViewVisibilityChange) {
+                onStreetViewVisibilityChange(isVisible);
+            }
+            // Close preview when entering Street View
+            if (isVisible || isPinningMode) {
+                setPreviewPano(null);
+            }
+        };
+
+        // Also close preview if pinning mode changes to true
+        if (isPinningMode) {
+            setPreviewPano(null);
+        }
+
+        const handlePositionChange = () => {
+            const pos = streetView.getPosition();
+            if (pos) {
+                svService.getPanorama({ location: pos, radius: 50 }, (data, status) => {
+                    if (status === 'OK' && onStreetViewUpdate) {
+                        onStreetViewUpdate({
+                            address: data.location.description || 'Lokasi Tidak Diketahui',
+                            position: { lat: data.location.latLng.lat(), lng: data.location.latLng.lng() }
+                        });
+                    }
+                });
+            }
+        };
+
+        const listener = streetView.addListener('visible_changed', handleVisibilityChange);
+        const posListener = streetView.addListener('position_changed', handlePositionChange);
+
+        if (mapLayer === 'streetview' || isStreetViewLayerActive) {
+            // Enable Street View Control
+            map.setOptions({ streetViewControl: true });
+
+            // Add Coverage Layer
             if (window.google && window.google.maps && window.google.maps.StreetViewCoverageLayer) {
                 coverageLayer = new window.google.maps.StreetViewCoverageLayer();
                 coverageLayer.setMap(map);
-            } else {
-                console.error('MapComponent: google.maps.StreetViewCoverageLayer not available');
             }
-        }
 
-        return () => {
-            if (coverageLayer) {
-                coverageLayer.setMap(null);
-            }
-        };
-    }, [map, mapLayer]);
+            // Add Click Listener for Preview
+            clickListener = map.addListener('click', (e) => {
+                const clickedLatLng = e.latLng;
+                let pixel = e.pixel;
+
+                // Fallback if pixel is missing (e.g. POI click)
+                if (!pixel && e.domEvent) {
+                    const mapDiv = map.getDiv();
+                    const rect = mapDiv.getBoundingClientRect();
+                    pixel = {
+                        x: e.domEvent.clientX - rect.left,
+                        y: e.domEvent.clientY - rect.top
+                    };
+                }
+
+                if (!pixel) return; // Safety check to prevent crash
+
+                // Check if we clicked on a Street View available location
+                svService.getPanorama({ location: clickedLatLng, radius: 50, source: google.maps.StreetViewSource.OUTDOOR }, (data, status) => {
+                    if (status === 'OK') {
+                        setPreviewPano({
+                            address: data.location.description || 'Jalan Tidak Diketahui',
+                            position: data.location.latLng,
+                            pixel: pixel,
+                            panoId: data.location.pano
+                        });
+                    } else {
+                        setPreviewPano(null);
+                    }
+                });
+            });
+
+            // Close preview on map interaction (drag or zoom)
+            dragListener = map.addListener('dragstart', () => {
+                setPreviewPano(null);
+            });
+            zoomListener = map.addListener('zoom_changed', () => {
+                setPreviewPano(null);
+            });
+
+            // Cleanup function for streetview mode
+            return () => {
+                if (coverageLayer) coverageLayer.setMap(null);
+                if (clickListener) google.maps.event.removeListener(clickListener);
+                if (dragListener) google.maps.event.removeListener(dragListener);
+                if (zoomListener) google.maps.event.removeListener(zoomListener);
+                map.setOptions({ streetViewControl: false });
+                listener.remove();
+                posListener.remove();
+            };
+
+        } else {
+            // Disable Street View Control
+            map.setOptions({ streetViewControl: false });
+            setPreviewPano(null); // Ensure popup is closed if we switch layers
+
+            // Cleanup function for non-streetview mode
+            return () => {
+                listener.remove();
+                posListener.remove();
+            };
+        }
+    }, [map, mapLayer, isStreetViewLayerActive, onStreetViewVisibilityChange]);
 
 
     useEffect(() => {
@@ -276,14 +385,14 @@ const MapComponent = ({
 
 
     return (
-        <>
+        <div style={{ position: 'relative', width: '100%', height: '100%' }}>
             <Map
                 defaultCenter={{ lat: -2.548926, lng: 118.0148634 }}
                 defaultZoom={5}
                 mapId={import.meta.env.VITE_GOOGLE_MAPS_MAP_ID || "e9f5b765b262e391"}
                 mapTypeControl={false}
                 streetViewControl={false}
-                mapTypeId={mapLayer === 'satellite' ? 'satellite' : 'roadmap'}
+                mapTypeId={mapLayer === 'satellite' ? 'hybrid' : 'roadmap'}
                 fullscreenControl={false}
                 zoomControl={false}
                 className="h-full w-full"
@@ -348,7 +457,76 @@ const MapComponent = ({
                 }
                 return null;
             })}
-        </>
+
+            {/* Render children passed from parent (e.g. InfoWindows) */}
+            {children}
+
+            {/* Street View Click Preview */}
+            {previewPano && (
+                <div
+                    style={{
+                        position: 'absolute',
+                        left: previewPano.pixel.x,
+                        top: previewPano.pixel.y,
+                        transform: 'translate(-50%, -100%) translateY(-15px)',
+                        zIndex: 1000,
+                        cursor: 'pointer',
+                    }}
+                    onClick={() => {
+                        const streetView = map.getStreetView();
+                        streetView.setPosition(previewPano.position);
+                        streetView.setVisible(true);
+                        setPreviewPano(null);
+                    }}
+                >
+                    <div className="bg-white p-1 rounded shadow-lg border border-gray-200 flex flex-col items-center relative group hover:bg-gray-50 transition-colors">
+                        {/* Close Button */}
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setPreviewPano(null);
+                            }}
+                            className="absolute -top-2 -right-2 bg-white rounded-full p-1 shadow-md border border-gray-200 hover:bg-gray-100 z-10"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                            </svg>
+                        </button>
+
+                        {/* Image */}
+                        <div className="w-48 h-32 bg-gray-200 overflow-hidden rounded-sm mb-1 relative">
+                            <img
+                                src={`https://maps.googleapis.com/maps/api/streetview?size=200x150&location=${previewPano.position.lat()},${previewPano.position.lng()}&fov=90&heading=0&pitch=0&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`}
+                                alt="Street View Preview"
+                                className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all">
+                                <span className="text-white font-semibold opacity-0 group-hover:opacity-100 drop-shadow-md text-sm">Klik untuk Masuk</span>
+                            </div>
+                        </div>
+                        {/* Street Name */}
+                        <div className="text-xs font-semibold text-gray-800 text-center px-1 max-w-[180px] truncate">
+                            {previewPano.address}
+                        </div>
+                        {/* Triangle Pointer */}
+                        <div
+                            style={{
+                                position: 'absolute',
+                                bottom: '-6px',
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                                width: 0,
+                                height: 0,
+                                borderLeft: '6px solid transparent',
+                                borderRight: '6px solid transparent',
+                                borderTop: '6px solid white',
+                                filter: 'drop-shadow(0 2px 1px rgba(0,0,0,0.1))'
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
+        </div>
     );
 };
-export default MapComponent;
+export default React.memo(MapComponent);

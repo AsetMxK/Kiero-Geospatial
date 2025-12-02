@@ -1,3 +1,4 @@
+import React from 'react';
 import InfoIcon from './icons/InfoIcon';
 import SitemapIcon from './icons/SitemapIcon';
 import Tooltip from './Tooltip';
@@ -15,7 +16,7 @@ import Tooltip from './Tooltip';
  */
 const FloatingActionButtons = ({ onShowInfo, onShowSubRegions, canDrillDown }) => {
   return (
-    <div className="flex gap-2 p-1.5 bg-white rounded-full shadow-xl border border-gray-100 animate-in fade-in slide-in-from-bottom-4 duration-300">
+    <div className="flex gap-2 p-1.5 bg-white rounded-full shadow-xl border border-gray-100">
       <Tooltip content="Tampilkan Info Wilayah">
         <button
           onClick={onShowInfo}
@@ -38,4 +39,4 @@ const FloatingActionButtons = ({ onShowInfo, onShowSubRegions, canDrillDown }) =
   );
 };
 
-export default FloatingActionButtons;
+export default React.memo(FloatingActionButtons);

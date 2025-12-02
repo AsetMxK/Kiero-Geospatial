@@ -111,7 +111,7 @@ const RegionPreviewInfoWindow = ({
           <div className="pt-1">
             <button
               onClick={onNavigate}
-              className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-blue-600 text-white border border-transparent hover:bg-blue-700 shadow-sm hover:shadow transition-all"
+              className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-blue-600 text-white border border-transparent hover:bg-blue-700 shadow-sm hover:shadow transition-colors duration-200"
             >
               <NavigationIcon className="w-3.5 h-3.5" />
               Lihat Detail Wilayah
@@ -126,4 +126,4 @@ const RegionPreviewInfoWindow = ({
   );
 };
 
-export default RegionPreviewInfoWindow;
+export default React.memo(RegionPreviewInfoWindow);

@@ -1,4 +1,4 @@
-const LayerIcon = () => (
+const LayerIcon = (props) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width="24"
@@ -9,6 +9,7 @@ const LayerIcon = () => (
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
+    {...props}
   >
     <polygon points="12 2 2 7 12 12 22 7 12 2" />
     <polyline points="2 17 12 22 22 17" />

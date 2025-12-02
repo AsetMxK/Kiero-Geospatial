@@ -1,6 +1,5 @@
 import WilayahIcon from './icons/WilayahIcon';
 import PinIcon from './icons/PinIcon';
-import LayerIcon from './icons/LayerIcon';
 import { ACTION_SIDEBAR_WIDTH } from '../constants/layout';
 
 /**
@@ -58,12 +57,6 @@ const ActionSidebar = ({ onButtonClick, activeSidebar }) => {
                 text="Disimpan"
                 onClick={() => onButtonClick('history')}
                 isActive={activeSidebar === 'history'}
-            />
-            <ActionSidebarButton
-                icon={<LayerIcon />}
-                text="Lapisan"
-                onClick={() => onButtonClick('layers')}
-                isActive={activeSidebar === 'layers'}
             />
         </div>
     );

@@ -6,14 +6,14 @@ import MapControls from '../components/MapControls';
 import SearchBar from '../components/SearchBar';
 import FilterPills from '../components/FilterPills';
 import UnifiedSidebar from '../components/UnifiedSidebar';
-import LayerIcon from '../components/icons/LayerIcon';
-import Tooltip from '../components/Tooltip';
 import ActionSidebar from '../components/ActionSidebar';
 import RegionPreviewInfoWindow from '../components/RegionPreviewInfoWindow';
 import FloatingActionButtons from '../components/FloatingActionButtons';
+import MapLayerControl from '../components/MapLayerControl';
 import LoadingOverlay from '../components/LoadingOverlay';
 import ErrorModal from '../components/ErrorModal';
-import OffscreenIndicator from '../components/OffscreenIndicator';
+import OffscreenIndicatorsLayer from '../components/OffscreenIndicatorsLayer';
+import Tooltip from '../components/Tooltip';
 import { useBoundaryData } from '../hooks/useBoundaryData';
 import { useTicketsData, useTicketDetails } from '../hooks/useTicketsData';
 import { useRegionStats } from '../hooks/useRegionStats';
@@ -73,7 +73,7 @@ const MapPage = () => {
     const [newlyCreatedPinId, setNewlyCreatedPinId] = useState(null);
     const [rawInfoData, setRawInfoData] = useState(null);
     const [augmentedInfoData, setAugmentedInfoData] = useState(null);
-    const [processedIndicators, setProcessedIndicators] = useState([]);
+
     const [panToTarget, setPanToTarget] = useState(null);
     const [mapData, setMapData] = useState([]);
     const [activeTicketId, setActiveTicketId] = useState(null);
@@ -88,6 +88,36 @@ const MapPage = () => {
         return z ? parseInt(z, 10) : null;
     });
     const [mapLayer, setMapLayer] = useState('default');
+    const [isStreetViewLayerActive, setIsStreetViewLayerActive] = useState(false);
+    const [isStreetViewVisible, setIsStreetViewVisible] = useState(false);
+    const [streetViewData, setStreetViewData] = useState(null);
+
+    const handlePinStreetViewLocation = () => {
+        if (streetViewData && streetViewData.position) {
+            // Create mock event for handleAddPin
+            const mockEvent = {
+                latLng: {
+                    lat: () => streetViewData.position.lat,
+                    lng: () => streetViewData.position.lng
+                }
+            };
+
+            // Exit Street View and focus on the new pin
+            if (mapInstance) {
+                mapInstance.getStreetView().setVisible(false);
+                mapInstance.setCenter(streetViewData.position);
+                mapInstance.setZoom(18);
+            }
+
+            // Directly add the pin with a slight delay to allow map to become visible
+            setTimeout(() => {
+                handleAddPin(mockEvent);
+            }, 500);
+
+            // Ensure we are not in "waiting for click" mode
+            setIsPinningMode(false);
+        }
+    };
 
     const { data: categories, loading: categoriesLoading } = useCategoryData();
 
@@ -217,19 +247,19 @@ const MapPage = () => {
         }
     }, [activeTicketId, mapData]);
 
-    const handleActivePinChange = (pinId) => {
+    const handleActivePinChange = useCallback((pinId) => {
         setActivePinId(pinId);
         if (pinId) {
             setActiveTicketId(null);
         }
-    };
+    }, []);
 
-    const handleActiveTicketChange = (ticketId) => {
+    const handleActiveTicketChange = useCallback((ticketId) => {
         setActiveTicketId(ticketId);
         if (ticketId) {
             setActivePinId(null);
         }
-    };
+    }, []);
 
     const params = new URLSearchParams(window.location.search);
     const nameParams = useMemo(() => ({
@@ -418,121 +448,9 @@ const MapPage = () => {
             panToWithOffset(panToTarget, panToTarget.zoom);
             setPanToTarget(null);
         }
+
+
     }, [panToTarget, mapInstance, panToWithOffset]);
-
-    useEffect(() => {
-        if (!mapInstance || !window.google.maps.geometry.spherical) return;
-
-        const CLUSTER_THRESHOLD_DEGREES = 15;
-        const PADDING = 28;
-
-        const processIndicators = () => {
-            const container = mapContainerRef.current;
-            if (!container) return;
-
-            const bounds = mapInstance.getBounds();
-            const center = mapInstance.getCenter();
-            if (!bounds || !center) return;
-
-            const offscreenPins = pins
-                .map(pin => {
-                    const pinLatLng = new google.maps.LatLng(pin.lat, pin.lng);
-                    if (bounds.contains(pinLatLng)) return null;
-                    let angle = window.google.maps.geometry.spherical.computeHeading(center, pinLatLng);
-                    if (angle < 0) angle += 360;
-                    return { ...pin, angle };
-                })
-                .filter(Boolean);
-
-            if (offscreenPins.length === 0) {
-                setProcessedIndicators([]);
-                return;
-            }
-
-            offscreenPins.sort((a, b) => a.angle - b.angle);
-            let clusters = [];
-            if (offscreenPins.length > 0) {
-                clusters.push({ pins: [offscreenPins[0]] });
-                for (let i = 1; i < offscreenPins.length; i++) {
-                    const pin = offscreenPins[i];
-                    const lastCluster = clusters[clusters.length - 1];
-                    const firstPinInCluster = lastCluster.pins[0];
-                    let angleDiff = Math.abs(pin.angle - firstPinInCluster.angle);
-                    if (angleDiff > 180) angleDiff = 360 - angleDiff;
-                    if (angleDiff <= CLUSTER_THRESHOLD_DEGREES) {
-                        lastCluster.pins.push(pin);
-                    } else {
-                        clusters.push({ pins: [pin] });
-                    }
-                }
-            }
-
-            if (clusters.length > 1) {
-                const firstCluster = clusters[0];
-                const lastCluster = clusters[clusters.length - 1];
-                const wrapAroundDiff = (360 - lastCluster.pins[0].angle) + firstCluster.pins[0].angle;
-                if (wrapAroundDiff <= CLUSTER_THRESHOLD_DEGREES) {
-                    lastCluster.pins.push(...firstCluster.pins);
-                    clusters.shift();
-                }
-            }
-
-            const containerRect = container.getBoundingClientRect();
-            const containerWidth = containerRect.width;
-            const containerHeight = containerRect.height;
-            const containerCenter = { x: containerWidth / 2, y: containerHeight / 2 };
-
-            const finalIndicators = clusters.map(cluster => {
-                const angles = cluster.pins.map(p => p.angle);
-                const sumSin = angles.reduce((sum, angle) => sum + Math.sin(angle * Math.PI / 180), 0);
-                const sumCos = angles.reduce((sum, angle) => sum + Math.cos(angle * Math.PI / 180), 0);
-                let avgAngleRad = Math.atan2(sumSin, sumCos);
-                let avgAngleDeg = avgAngleRad * 180 / Math.PI;
-                if (avgAngleDeg < 0) avgAngleDeg += 360;
-
-                const mathAngleRad = ((450 - avgAngleDeg) % 360) * Math.PI / 180;
-                const cos = Math.cos(mathAngleRad);
-                const sin = Math.sin(mathAngleRad);
-                const halfWidth = containerWidth / 2 - PADDING;
-                const halfHeight = containerHeight / 2 - PADDING;
-                const scaleX = Math.abs(cos) > 1e-9 ? halfWidth / Math.abs(cos) : Infinity;
-                const scaleY = Math.abs(sin) > 1e-9 ? halfHeight / Math.abs(sin) : Infinity;
-                const scale = Math.min(scaleX, scaleY);
-                const intersectX = scale * cos;
-                const intersectY = scale * sin;
-                const x = containerCenter.x + intersectX;
-                const y = containerCenter.y - intersectY;
-
-                return {
-                    id: cluster.pins.map(p => p.id).join('-'),
-                    pins: cluster.pins,
-                    count: cluster.pins.length,
-                    rotation: avgAngleDeg + 180,
-                    top: y,
-                    left: x,
-                };
-            });
-
-            setProcessedIndicators(finalIndicators);
-        };
-
-        const idleListener = mapInstance.addListener('idle', processIndicators);
-        const zoomListener = mapInstance.addListener('zoom_changed', processIndicators);
-        const resizeObserver = new ResizeObserver(processIndicators);
-        const currentMapContainer = mapContainerRef.current;
-        if (currentMapContainer) {
-            resizeObserver.observe(currentMapContainer);
-        }
-        processIndicators();
-
-        return () => {
-            idleListener.remove();
-            zoomListener.remove();
-            if (currentMapContainer) {
-                resizeObserver.unobserve(currentMapContainer);
-            }
-        };
-    }, [mapInstance, pins]);
 
     useEffect(() => {
         if (isNavigating) {
@@ -796,7 +714,7 @@ const MapPage = () => {
         }
     }, [newlyCreatedPinId]);
 
-    const handleAddPin = (e) => {
+    const handleAddPin = useCallback((e) => {
         if (!e.latLng) return;
         const newPinData = { lat: e.latLng.lat(), lng: e.latLng.lng(), title: 'Point of Interest' };
         const newPinWithId = addPinToHistory(newPinData);
@@ -804,9 +722,9 @@ const MapPage = () => {
         setActivePinId(newPinWithId.id);
         setNewlyCreatedPinId(newPinWithId.id);
         setPanToTarget({ lat: newPinWithId.lat, lng: newPinWithId.lng, zoom: 15 });
-    };
+    }, []);
 
-    const handleUpdatePin = (id, updates) => {
+    const handleUpdatePin = useCallback((id, updates) => {
         setPins(currentPins => {
             const updatedPins = currentPins.map(pin =>
                 pin.id === id ? { ...pin, ...updates } : pin
@@ -817,17 +735,17 @@ const MapPage = () => {
             }
             return updatedPins;
         });
-    };
+    }, []);
 
-    const handleDeletePin = (id) => {
+    const handleDeletePin = useCallback((id) => {
         removePinFromHistory(id);
         setPins(prevPins => prevPins.filter(p => p.id !== id));
-        if (activePinId === id) setActivePinId(null);
-    };
+        setActivePinId(currentId => currentId === id ? null : currentId);
+    }, []);
 
-    const handleUpdatePinTitle = (id, newTitle) => {
+    const handleUpdatePinTitle = useCallback((id, newTitle) => {
         handleUpdatePin(id, { title: newTitle });
-    };
+    }, [handleUpdatePin]);
 
     const handleGoToPin = (pin) => {
         setActivePinId(pin.id);
@@ -848,12 +766,12 @@ const MapPage = () => {
         }
     };
 
-    const handleMapClick = () => {
-        if (activePinId) setActivePinId(null);
-        if (activeTicketId) setActiveTicketId(null);
+    const handleMapClick = useCallback(() => {
+        setActivePinId(current => current ? null : current);
+        setActiveTicketId(current => current ? null : current);
         setPreviewInfo(null);
         setFabPosition(null);
-    };
+    }, []);
 
     const handleSidebarButtonClick = (sidebarName) => {
         if (activeSidebar === sidebarName) {
@@ -870,9 +788,7 @@ const MapPage = () => {
         setIsSidebarHidden(prev => !prev);
     };
 
-    if (!apiKey) {
-        return <div className="w-screen h-screen flex items-center justify-center">API Key untuk Google Maps tidak ditemukan.</div>;
-    }
+
 
     const isUnifiedSidebarOpen = activeSidebar === 'wilayah' || activeSidebar === 'regionInfo' || activeSidebar === 'history' || activeSidebar === 'layers';
     const layerButtonOffset = isUnifiedSidebarOpen && !isSidebarHidden ? REGION_INFO_SIDEBAR_WIDTH : 0;
@@ -892,6 +808,70 @@ const MapPage = () => {
         }
     };
 
+    const handleClosePreview = useCallback(() => setPreviewInfo(null), []);
+
+    const handleNavigateFromPreview = useCallback(() => {
+        if (previewInfo?.featureProps) {
+            handleNavigateToRegion(previewInfo.featureProps);
+        }
+    }, [previewInfo, handleNavigateToRegion]);
+
+    const handleCloseFab = useCallback(() => setFabPosition(null), []);
+
+    const handleShowInfoFab = useCallback(() => {
+        setActiveSidebar('regionInfo');
+        setIsSidebarHidden(false);
+        setFabPosition(null);
+    }, []);
+
+    const handleShowSubRegionsFab = useCallback(() => {
+        syncViewMode('drill-down');
+        const newSelection = { ...currentSelection };
+        setCurrentSelection(newSelection);
+        navigationHistory.current.push({ selection: newSelection, viewMode: 'drill-down' });
+        setFabPosition(null);
+        setActiveSidebar(null);
+    }, [syncViewMode, currentSelection]);
+
+    const mapChildren = useMemo(() => (
+        <>
+            {previewInfo && (
+                <RegionPreviewInfoWindow
+                    position={previewInfo.position}
+                    regionName={previewInfo.name}
+                    stats={regionStats}
+                    loading={statsLoading}
+                    onClose={handleClosePreview}
+                    onNavigate={handleNavigateFromPreview}
+                />
+            )}
+            {fabPosition && (
+                <InfoWindow position={fabPosition} onCloseClick={handleCloseFab} disableAutoPan={true}>
+                    <FloatingActionButtons
+                        onShowInfo={handleShowInfoFab}
+                        onShowSubRegions={handleShowSubRegionsFab}
+                        canDrillDown={!currentSelection.desaName}
+                    />
+                </InfoWindow>
+            )}
+        </>
+    ), [
+        previewInfo,
+        regionStats,
+        statsLoading,
+        handleClosePreview,
+        handleNavigateFromPreview,
+        fabPosition,
+        handleCloseFab,
+        handleShowInfoFab,
+        handleShowSubRegionsFab,
+        currentSelection.desaName
+    ]);
+
+    if (!apiKey) {
+        return <div className="w-screen h-screen flex items-center justify-center">API Key untuk Google Maps tidak ditemukan.</div>;
+    }
+
     return (
         <APIProvider apiKey={apiKey} libraries={MAP_LIBRARIES} language="id">
             {urlError && <ErrorModal message={urlError} onClose={() => setUrlError(null)} />}
@@ -899,7 +879,7 @@ const MapPage = () => {
             <main ref={mainContainerRef} className="relative w-screen h-screen bg-gray-100 flex">
                 <div className="relative w-screen h-screen">
                     {(isLoading || isNavigating) && <LoadingOverlay text={loadingText} />}
-                    <div ref={mapContainerRef} className="w-full h-full">
+                    <div ref={mapContainerRef} className="w-full h-full" style={{ contentVisibility: 'visible' }}>
                         <MapComponent
                             isRegionSidebarOpen={isUnifiedSidebarOpen}
                             isTouchDevice={isTouchDevice}
@@ -930,13 +910,25 @@ const MapPage = () => {
                             ticketDetailError={ticketDetailError}
                             forcedZoom={urlZoom}
                             mapLayer={mapLayer}
+                            onStreetViewVisibilityChange={setIsStreetViewVisible}
+                            isStreetViewLayerActive={isStreetViewLayerActive}
+                            onStreetViewUpdate={setStreetViewData}
+                        >
+                            {mapChildren}
+                        </MapComponent>
+                        <OffscreenIndicatorsLayer
+                            mapInstance={mapInstance}
+                            pins={pins}
+                            mapContainerRef={mapContainerRef}
+                            onIndicatorClick={handleIndicatorClick}
+                            isStreetViewVisible={isStreetViewVisible}
                         />
-                        {previewInfo && <RegionPreviewInfoWindow position={previewInfo.position} regionName={previewInfo.name} stats={regionStats} loading={statsLoading} onClose={() => setPreviewInfo(null)} onNavigate={() => handleNavigateToRegion(previewInfo.featureProps)} />}
-                        {fabPosition && <InfoWindow position={fabPosition} onCloseClick={() => setFabPosition(null)}> <FloatingActionButtons onShowInfo={() => { setActiveSidebar('regionInfo'); setIsSidebarHidden(false); setFabPosition(null); }} onShowSubRegions={() => { syncViewMode('drill-down'); const newSelection = { ...currentSelection }; setCurrentSelection(newSelection); navigationHistory.current.push({ selection: newSelection, viewMode: 'drill-down' }); setFabPosition(null); setActiveSidebar(null); }} canDrillDown={!currentSelection.desaName} /> </InfoWindow>}
-                        {processedIndicators.map(indicator => <OffscreenIndicator key={indicator.id} top={indicator.top} left={indicator.left} rotation={indicator.rotation} count={indicator.count} onClick={() => handleIndicatorClick(indicator)} />)}
                     </div>
 
-                    <div className="absolute inset-0 z-10 pointer-events-none">
+                    <div
+                        className={`absolute inset-0 z-10 pointer-events-none transition-all duration-300 ${isStreetViewVisible ? 'opacity-0 invisible delay-0' : 'opacity-100 visible delay-0'}`}
+                        style={{ transitionProperty: 'opacity, visibility', transitionDelay: isStreetViewVisible ? '0ms, 300ms' : '0ms, 0ms' }}
+                    >
                         <div className="relative w-full h-full">
                             <div className="absolute top-4 pointer-events-auto z-30 transition-all duration-300 ease-in-out" style={{ left: `calc(${ACTION_SIDEBAR_WIDTH}px + 1rem)`, width: `calc(${REGION_INFO_SIDEBAR_WIDTH}px - 2rem)` }}>
                                 <SearchBar onPlaceSelect={handlePlaceSelect} />
@@ -976,14 +968,51 @@ const MapPage = () => {
 
                             <MapControls isFullscreen={isFullscreen} onToggleFullscreen={handleToggleFullscreen} onBack={handleBack} isBackDisabled={navigationHistory.current.length <= 1} isPinningMode={isPinningMode} onTogglePinMode={() => setIsPinningMode(!isPinningMode)} />
                             <>
-                                <div className="absolute bottom-4 z-10 flex flex-col gap-2 pointer-events-auto transition-all duration-300 ease-in-out" style={{ left: `calc(${ACTION_SIDEBAR_WIDTH}px + ${layerButtonOffset}px + 1rem)` }}>
-                                    <Tooltip content={isBoundaryTransparent ? 'Tampilkan Batas Wilayah' : 'Sembunyikan Batas Wilayah'}>
-                                        <button onClick={toggleBoundaryTransparency} className={`p-2.5 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center ${isBoundaryTransparent ? 'bg-blue-50 text-blue-600 ring-2 ring-blue-600' : 'bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`}>
-                                            <LayerIcon />
-                                        </button>
-                                    </Tooltip>
-                                </div>
+                                <MapLayerControl
+                                    mapLayer={mapLayer}
+                                    onMapLayerChange={setMapLayer}
+                                    isStreetViewVisible={isStreetViewLayerActive}
+                                    onStreetViewVisibilityChange={setIsStreetViewLayerActive}
+                                    style={{ left: `calc(${ACTION_SIDEBAR_WIDTH}px + ${layerButtonOffset}px + 1rem)` }}
+                                />
                             </>
+                        </div>
+                    </div>
+
+                    {/* Custom Street View Control (Back + Address + Pin) */}
+                    <div className={`absolute top-4 left-4 z-50 transition-opacity duration-300 flex items-center gap-2 ${isStreetViewVisible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+                        <div className="bg-gray-900/80 backdrop-blur-sm text-white rounded-lg shadow-lg flex items-center p-1 pr-4 gap-3 max-w-md">
+                            <Tooltip content="Kembali">
+                                <button
+                                    onClick={() => {
+                                        // Do NOT reset mapLayer to default, keep it as streetview
+                                        if (mapInstance) {
+                                            const sv = mapInstance.getStreetView();
+                                            if (sv) sv.setVisible(false);
+                                        }
+                                    }}
+                                    className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                    </svg>
+                                </button>
+                            </Tooltip>
+                            <div className="flex flex-col min-w-0">
+                                <span className="text-sm font-medium truncate">{streetViewData?.address || 'Memuat lokasi...'}</span>
+                                <span className="text-xs text-gray-300">Street View</span>
+                            </div>
+                            <div className="w-px h-8 bg-gray-600 mx-1"></div>
+                            <Tooltip content="Pin Lokasi Ini">
+                                <button
+                                    onClick={handlePinStreetViewLocation}
+                                    className="p-2 hover:bg-white/10 rounded-full transition-colors text-blue-400 hover:text-blue-300"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                                    </svg>
+                                </button>
+                            </Tooltip>
                         </div>
                     </div>
                 </div>

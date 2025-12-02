@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { AdvancedMarker, InfoWindow, useAdvancedMarkerRef, useMapsLibrary } from '@vis.gl/react-google-maps';
 import Tooltip from './Tooltip';
 import MapMarkerIcon from './icons/MapMarkerIcon';
@@ -374,4 +374,4 @@ const Pin = ({ pin, onDelete, onUpdateTitle, onUpdatePin, isActive, onSelect, is
     );
 };
 
-export default Pin;
+export default React.memo(Pin);
