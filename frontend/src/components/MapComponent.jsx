@@ -391,7 +391,7 @@ const MapComponent = ({
                 defaultZoom={5}
                 mapId={import.meta.env.VITE_GOOGLE_MAPS_MAP_ID || "e9f5b765b262e391"}
                 mapTypeControl={false}
-                streetViewControl={false}
+                streetViewControl={mapLayer === 'streetview' || isStreetViewLayerActive}
                 mapTypeId={mapLayer === 'satellite' ? 'hybrid' : 'roadmap'}
                 fullscreenControl={false}
                 zoomControl={false}
