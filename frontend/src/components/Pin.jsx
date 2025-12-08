@@ -159,7 +159,7 @@ const Pin = ({ pin, onDelete, onUpdateTitle, onUpdatePin, isActive, onSelect, is
 
             const textParts = [pin.title];
 
-            if (pin.adminInfo.provinsi) {
+            if (pin.adminInfo && pin.adminInfo.provinsi) {
                 const adminParts = [
                     pin.adminInfo.provinsi.nama,
                     pin.adminInfo.kab_kota.nama,

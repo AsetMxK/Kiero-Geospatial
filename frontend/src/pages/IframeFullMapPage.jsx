@@ -9,7 +9,7 @@ import { useRegionStats } from '../hooks/useRegionStats';
 import { useUrlSync } from '../hooks/useUrlSync';
 import { useTicketsData, useTicketDetails } from '../hooks/useTicketsData';
 import { toSlug, getInitialDateRange } from '../utils/mapUtils';
-import { getPinHistory, addPinToHistory, updatePinInHistory, removePinFromHistory } from '../utils/pin-history';
+import { getPinHistory, addPinToHistory, updatePinInHistory, removePinFromHistory, generatePinId } from '../utils/pin-history';
 import { useRegionResolver } from '../hooks/useRegionResolver';
 import { useRegionByPointFetcher } from '../hooks/useRegionByPoint';
 import { ACTION_SIDEBAR_WIDTH, REGION_INFO_SIDEBAR_WIDTH } from '../constants/layout';
@@ -431,6 +431,7 @@ const IframeFullMapPage = () => {
         const shareLng = params.get('share_lng');
 
         if (shareLat && shareLng) {
+            const isTemporary = params.get('is_temporary') === 'true';
             const newPinData = {
                 lat: parseFloat(shareLat),
                 lng: parseFloat(shareLng),
@@ -439,16 +440,26 @@ const IframeFullMapPage = () => {
 
             const existingPin = pins.find(p => p.lat === newPinData.lat && p.lng === newPinData.lng && p.title === newPinData.title);
 
-            const targetPin = existingPin || addPinToHistory(newPinData);
-            if (!existingPin) {
-                setPins(prevPins => [...prevPins, targetPin]);
+            let targetPin;
+            if (existingPin) {
+                targetPin = existingPin;
+            } else {
+                if (isTemporary) {
+                    targetPin = { ...newPinData, id: generatePinId() };
+                    setPins(prevPins => [...prevPins, targetPin]);
+                } else {
+                    targetPin = addPinToHistory(newPinData);
+                    setPins(prevPins => [...prevPins, targetPin].slice(-5));
+                }
             }
+
             setActivePinId(targetPin.id);
             setPanToTarget({ lat: targetPin.lat, lng: targetPin.lng, zoom: 15 });
 
             params.delete('share_lat');
             params.delete('share_lng');
             params.delete('share_title');
+            params.delete('is_temporary');
 
             const newUrl = `${window.location.pathname}?${params.toString()}`;
             window.history.replaceState({}, '', newUrl);
@@ -818,7 +829,7 @@ const IframeFullMapPage = () => {
         if (!e.latLng) return;
         const newPinData = { lat: e.latLng.lat(), lng: e.latLng.lng(), title: 'Point of Interest' };
         const newPinWithId = addPinToHistory(newPinData);
-        setPins(prevPins => [...prevPins, newPinWithId]);
+        setPins(prevPins => [...prevPins, newPinWithId].slice(-5));
         setActivePinId(newPinWithId.id);
         setNewlyCreatedPinId(newPinWithId.id);
         setPanToTarget({ lat: newPinWithId.lat, lng: newPinWithId.lng, zoom: 15 });

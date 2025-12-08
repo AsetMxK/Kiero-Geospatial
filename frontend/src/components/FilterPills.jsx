@@ -84,8 +84,22 @@ const FilterPills = ({
         setIsCategoryOpen(false);
     };
 
-    const formattedStartDate = dateRange.startDate ? format(dateRange.startDate, 'd MMM yyyy', { locale: id }) : '';
-    const formattedEndDate = dateRange.endDate ? format(dateRange.endDate, 'd MMM yyyy', { locale: id }) : '';
+    const formatRange = (start, end) => {
+        if (!start || !end) return "";
+        const startYear = start.getFullYear();
+        const endYear = end.getFullYear();
+        const startMonth = start.getMonth();
+        const endMonth = end.getMonth();
+
+        if (startYear === endYear && startMonth === endMonth) {
+            return `${format(start, "d", { locale: id })} - ${format(end, "d MMM yyyy", { locale: id })}`;
+        } else if (startYear === endYear) {
+            return `${format(start, "d MMM", { locale: id })} - ${format(end, "d MMM yyyy", { locale: id })}`;
+        }
+        return `${format(start, "d MMM yyyy", { locale: id })} - ${format(end, "d MMM yyyy", { locale: id })}`;
+    };
+
+    const formattedDateRange = formatRange(dateRange.startDate, dateRange.endDate);
     const isDateDefault = !dateRange.startDate || !dateRange.endDate || (new Date().toDateString() === dateRange.endDate.toDateString() && new Date(new Date().setDate(new Date().getDate() - 30)).toDateString() === dateRange.startDate.toDateString());
 
     return (
@@ -143,7 +157,7 @@ const FilterPills = ({
                      `}
                 >
                     <CalendarIcon className="w-4 h-4" />
-                    <span>{isDateDefault ? '30 Hari Terakhir' : `${formattedStartDate} - ${formattedEndDate}`}</span>
+                    <span>{isDateDefault ? '30 Hari Terakhir' : formattedDateRange}</span>
                 </button>
                 <FloatingPortal>
                     {isDateOpen && (

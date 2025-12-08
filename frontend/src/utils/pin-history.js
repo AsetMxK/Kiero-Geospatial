@@ -39,7 +39,8 @@ export const addPinToHistory = (pin) => {
     ...pin,
     id: generatePinId(),
   };
-  const updatedHistory = [...history, newPin];
+  // Keep only the last 5 pins (FIFO)
+  const updatedHistory = [...history, newPin].slice(-5);
   localStorage.setItem(PIN_HISTORY_KEY, JSON.stringify(updatedHistory));
   return newPin;
 };
@@ -60,6 +61,11 @@ export const removePinFromHistory = (pinId) => {
  */
 export const updatePinInHistory = (updatedPin) => {
   const history = getPinHistory();
+  const exists = history.some(p => p.id === updatedPin.id);
+  if (!exists) {
+    console.log('updatePinInHistory: Pin not found in history, skipping update.', updatedPin.id);
+    return;
+  }
   const updatedHistory = history.map((pin) =>
     pin.id === updatedPin.id ? updatedPin : pin
   );

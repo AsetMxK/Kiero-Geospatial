@@ -285,7 +285,7 @@ const UnifiedSidebar = ({
     const renderHistory = () => (
         <>
             <div className="p-4 border-b flex justify-between items-center pt-20">
-                <h2 className="text-lg font-bold text-gray-800">Daftar Pin</h2>
+                <h2 className="text-lg font-bold text-gray-800">Riwayat 5 pin terakhir</h2>
             </div>
             <div className="flex-grow p-2.5 overflow-y-auto custom-scrollbar space-y-2.5 bg-gray-50/50">
                 {pins.length === 0 ? (
@@ -293,7 +293,7 @@ const UnifiedSidebar = ({
                         Belum ada pin yang disimpan.
                     </p>
                 ) : (
-                    pins.map((pin) => (
+                    [...pins].reverse().map((pin) => (
                         <div
                             key={pin.id}
                             className="bg-white border border-gray-200/80 rounded-lg p-3 shadow-sm flex flex-col gap-2 transition-shadow hover:shadow-md"

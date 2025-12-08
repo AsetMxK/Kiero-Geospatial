@@ -20,7 +20,7 @@ import { useRegionStats } from '../hooks/useRegionStats';
 import { useUrlSync } from '../hooks/useUrlSync';
 import { useRegionResolver } from '../hooks/useRegionResolver';
 import { useRegionByPointFetcher } from '../hooks/useRegionByPoint';
-import { addPinToHistory, getPinHistory, removePinFromHistory, updatePinInHistory } from '../utils/pin-history';
+import { addPinToHistory, getPinHistory, removePinFromHistory, updatePinInHistory, generatePinId } from '../utils/pin-history';
 import { ACTION_SIDEBAR_WIDTH, REGION_INFO_SIDEBAR_WIDTH } from '../constants/layout';
 import { getInitialDateRange, toSlug } from '../utils/mapUtils'
 import { useCategoryData } from '../hooks/useCategoryData';
@@ -314,6 +314,7 @@ const MapPage = () => {
         const shareLng = params.get('share_lng');
 
         if (shareLat && shareLng) {
+            const isTemporary = params.get('is_temporary') === 'true';
             const newPinData = {
                 lat: parseFloat(shareLat),
                 lng: parseFloat(shareLng),
@@ -322,16 +323,30 @@ const MapPage = () => {
 
             const existingPin = pins.find(p => p.lat === newPinData.lat && p.lng === newPinData.lng && p.title === newPinData.title);
 
-            const targetPin = existingPin || addPinToHistory(newPinData);
-            if (!existingPin) {
-                setPins(prevPins => [...prevPins, targetPin]);
+            let targetPin;
+            if (existingPin) {
+                console.log('Using existing pin:', existingPin);
+                targetPin = existingPin;
+            } else {
+                console.log('Creating new pin. isTemporary:', isTemporary);
+                if (isTemporary) {
+                    targetPin = { ...newPinData, id: generatePinId() };
+                    console.log('Created temporary pin:', targetPin);
+                    setPins(prevPins => [...prevPins, targetPin]);
+                } else {
+                    targetPin = addPinToHistory(newPinData);
+                    console.log('Created permanent pin:', targetPin);
+                    setPins(prevPins => [...prevPins, targetPin].slice(-5));
+                }
             }
+
             setActivePinId(targetPin.id);
             setPanToTarget({ lat: targetPin.lat, lng: targetPin.lng, zoom: 15 });
 
             params.delete('share_lat');
             params.delete('share_lng');
             params.delete('share_title');
+            params.delete('is_temporary');
 
             const newUrl = `${window.location.pathname}?${params.toString()}`;
             window.history.replaceState({}, '', newUrl);
@@ -718,7 +733,7 @@ const MapPage = () => {
         if (!e.latLng) return;
         const newPinData = { lat: e.latLng.lat(), lng: e.latLng.lng(), title: 'Point of Interest' };
         const newPinWithId = addPinToHistory(newPinData);
-        setPins(prevPins => [...prevPins, newPinWithId]);
+        setPins(prevPins => [...prevPins, newPinWithId].slice(-5));
         setActivePinId(newPinWithId.id);
         setNewlyCreatedPinId(newPinWithId.id);
         setPanToTarget({ lat: newPinWithId.lat, lng: newPinWithId.lng, zoom: 15 });

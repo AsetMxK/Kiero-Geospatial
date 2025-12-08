@@ -76,9 +76,23 @@ const DateRangePicker = ({ dateRange, onDateRangeChange }) => {
     const handleToggle = () => {
         if (!isOpen && buttonRef.current) {
             const rect = buttonRef.current.getBoundingClientRect();
+            let left = rect.left + window.scrollX;
+
+            // Check for overflow (assuming approx 600px width for 2 months + sidebar)
+            const calendarWidth = 600;
+            const viewportWidth = window.innerWidth;
+
+            if (left + calendarWidth > viewportWidth) {
+                // Shift left just enough to fit in the viewport with a small buffer
+                left = viewportWidth - calendarWidth - 20;
+            }
+
+            // Ensure it doesn't go off-screen to the left
+            if (left < 10) left = 10;
+
             setPopupPosition({
                 top: rect.bottom + window.scrollY,
-                left: rect.left + window.scrollX,
+                left: left,
             });
         }
         setIsOpen(!isOpen);
