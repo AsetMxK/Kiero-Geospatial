@@ -103,6 +103,8 @@ const UnifiedSidebar = ({
     const startY = useRef(0);
     const currentY = useRef(0);
     const startTime = useRef(0);
+    const hasDragged = useRef(false);
+
     const handleProvinceChange = (e) => {
         const provinceCode = e.target.value;
         onSelectionChange({ provinceCode: provinceCode || undefined }, 'province');
@@ -418,27 +420,7 @@ const UnifiedSidebar = ({
     const HALF_HEIGHT_VH = 50;
     const FULL_HEIGHT_VH = 99;
 
-    const handleTouchStart = (e) => {
-        if (!isMobile) return;
-        startY.current = e.touches[0].clientY;
-        currentY.current = startY.current;
-        startTime.current = Date.now();
-        setIsDragging(true);
-    };
-
-    const handleTouchMove = (e) => {
-        if (!isDragging || !isMobile) return;
-        const touchY = e.touches[0].clientY;
-        const deltaY = touchY - startY.current;
-        currentY.current = touchY;
-        setDragOffset(deltaY);
-    };
-
-    const handleTouchEnd = () => {
-        if (!isDragging || !isMobile) return;
-        setIsDragging(false);
-        setDragOffset(0);
-
+    const processDragEnd = () => {
         const deltaY = currentY.current - startY.current;
         const deltaTime = Date.now() - startTime.current;
         const velocity = Math.abs(deltaY) / deltaTime;
@@ -470,7 +452,77 @@ const UnifiedSidebar = ({
         }
     };
 
-    const handleMobileToggle = () => {
+    const handleTouchStart = (e) => {
+        if (!isMobile) return;
+        hasDragged.current = false;
+        startY.current = e.touches[0].clientY;
+        currentY.current = startY.current;
+        startTime.current = Date.now();
+        setIsDragging(true);
+    };
+
+    const handleTouchMove = (e) => {
+        if (!isDragging || !isMobile) return;
+        const touchY = e.touches[0].clientY;
+        const deltaY = touchY - startY.current;
+        if (Math.abs(deltaY) > 5) hasDragged.current = true;
+        currentY.current = touchY;
+        setDragOffset(deltaY);
+    };
+
+    const handleTouchEnd = () => {
+        if (!isDragging || !isMobile) return;
+        setIsDragging(false);
+        setDragOffset(0);
+        processDragEnd();
+    };
+
+    // Mouse handlers for desktop drag
+    const handleMouseDown = (e) => {
+        if (!isMobile) return;
+        e.preventDefault();
+        hasDragged.current = false;
+        startY.current = e.clientY;
+        currentY.current = startY.current;
+        startTime.current = Date.now();
+        setIsDragging(true);
+    };
+
+    useEffect(() => {
+        if (!isDragging) return;
+
+        const handleMouseMove = (e) => {
+            const clientY = e.clientY;
+            const deltaY = clientY - startY.current;
+            if (Math.abs(deltaY) > 5) hasDragged.current = true;
+            currentY.current = clientY;
+            setDragOffset(deltaY);
+        };
+
+        const handleMouseUp = () => {
+            setIsDragging(false);
+            setDragOffset(0);
+            processDragEnd();
+        };
+
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [isDragging]);
+
+    const handleMobileToggle = (e) => {
+        if (hasDragged.current) {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            return;
+        }
+
         if (isHidden) {
             // Peek -> Half
             onToggleVisibility();
@@ -546,6 +598,7 @@ const UnifiedSidebar = ({
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
+                    onMouseDown={handleMouseDown}
                     onClick={handleMobileToggle}
                 >
                     <div className="w-12 h-1.5 bg-gray-300 rounded-full"></div>
