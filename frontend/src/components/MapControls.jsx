@@ -16,6 +16,7 @@ import BackIcon from './icons/BackIcon';
  * @param {boolean} props.isBackDisabled - Apakah tombol "kembali" harus dinonaktifkan.
  * @param {boolean} props.isPinningMode - Apakah peta saat ini dalam "mode pin".
  * @param {Function} props.onTogglePinMode - Fungsi callback untuk mengubah "mode pin".
+ * @param {boolean} props.isMobile - Apakah tampilan saat ini adalah mobile.
  * @returns {JSX.Element} Sebuah div yang berisi tombol-tombol kontrol peta.
  */
 const MapControls = ({
@@ -25,9 +26,10 @@ const MapControls = ({
   isBackDisabled,
   isPinningMode,
   onTogglePinMode,
+  isMobile,
 }) => {
   return (
-    <div className="absolute top-4 right-4 z-20 flex flex-col gap-3 pointer-events-auto">
+    <div className={`absolute ${isMobile ? 'right-4' : 'top-4 right-4'} z-20 flex flex-col gap-3 pointer-events-auto`} style={isMobile ? { bottom: 'calc(var(--mobile-drawer-height, 80px) + 16px)', transition: 'var(--drawer-transition, bottom 0.3s ease-in-out)' } : {}}>
       <Tooltip content={isFullscreen ? 'Keluar Layar Penuh' : 'Masuk Layar Penuh'}>
         <button
           onClick={onToggleFullscreen}

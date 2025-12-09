@@ -47,6 +47,7 @@ import { ACTION_SIDEBAR_WIDTH, REGION_INFO_SIDEBAR_WIDTH } from '../constants/la
 const MapComponent = ({
     isRegionSidebarOpen,
     isTouchDevice,
+    isMobile,
     selection,
     isNavigating,
     onInfoChange = () => { },
@@ -191,7 +192,12 @@ const MapComponent = ({
                 map.setCenter(masterBounds.getCenter());
                 map.setZoom(forcedZoom);
             } else {
-                const padding = {
+                const padding = isMobile ? {
+                    left: 20,
+                    right: 20,
+                    top: 75, // Account for SearchBar + FilterPills
+                    bottom: 250 // Account for BottomSheet peek
+                } : {
                     left: ACTION_SIDEBAR_WIDTH + (isRegionSidebarOpen ? REGION_INFO_SIDEBAR_WIDTH : 0) + 20,
                     right: 20,
                     top: 20,
@@ -269,8 +275,13 @@ const MapComponent = ({
         const posListener = streetView.addListener('position_changed', handlePositionChange);
 
         if (mapLayer === 'streetview' || isStreetViewLayerActive) {
-            // Enable Street View Control
-            map.setOptions({ streetViewControl: true });
+            // Enable Street View Control and Position it
+            map.setOptions({
+                streetViewControl: true,
+                streetViewControlOptions: {
+                    position: isMobile ? window.google.maps.ControlPosition.RIGHT_TOP : window.google.maps.ControlPosition.RIGHT_BOTTOM
+                }
+            });
 
             // Add Coverage Layer
             if (window.google && window.google.maps && window.google.maps.StreetViewCoverageLayer) {
@@ -525,6 +536,18 @@ const MapComponent = ({
                         />
                     </div>
                 </div>
+            )}
+
+            {/* Mobile CSS Override for Pegman Position */}
+            {isMobile && (
+                <style>
+                    {`
+                        .gm-svpc {
+                            margin-top: 110px !important;
+                            margin-left: -5px !important; /* Adjust as needed */
+                        }
+                    `}
+                </style>
             )}
         </div>
     );

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import CustomSelectDropdown from './CustomSelectDropdown';
 import Statistics from './Statistics';
 import SidebarToggleButton from './SidebarToggleButton';
@@ -20,6 +20,18 @@ const ShareIcon = () => (
                 <path d="M331,750 C329.343,750 328,748.657 328,747 C328,745.343 329.343,744 331,744 C332.657,744 334,745.343 334,747 C334,748.657 332.657,750 331,750 L331,750 Z M317,742 C315.343,742 314,740.657 314,739 C314,737.344 315.343,736 317,736 C318.657,736 320,737.344 320,739 C320,740.657 318.657,742 317,742 L317,742 Z M331,728 C332.657,728 334,729.343 334,731 C334,732.657 332.657,734 331,734 C329.343,734 328,732.657 328,731 C328,729.343 329.343,728 331,728 L331,728 Z M331,742 C329.23,742 327.685,742.925 326.796,744.312 L321.441,741.252 C321.787,740.572 322,739.814 322,739 C322,738.497 321.903,738.021 321.765,737.563 L327.336,734.38 C328.249,735.37 329.547,736 331,736 C333.762,736 336,733.762 336,731 C336,728.238 333.762,726 331,726 C328.238,726 326,728.238 326,731 C326,731.503 326.097,731.979 326.235,732.438 L320.664,735.62 C319.751,734.631 318.453,734 317,734 C314.238,734 312,736.238 312,739 C312,741.762 314.238,744 317,744 C318.14,744 319.179,743.604 320.02,742.962 L320,743 L326.055,746.46 C326.035,746.64 326,746.814 326,747 C326,749.762 328.238,752 331,752 C333.762,752 336,749.762 336,747 C336,744.238 333.762,742 331,742 L331,742 Z"></path>
             </g>
         </g>
+    </svg>
+);
+
+const CheckIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+    </svg>
+);
+
+const ErrorIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
     </svg>
 );
 
@@ -81,15 +93,21 @@ const UnifiedSidebar = ({
     pins,
     onGoToPin,
     onDeletePin,
+    isMobile,
 }) => {
     const [activeAdminTab, setActiveAdminTab] = useState('admin');
     const [activeRegionInfoTab, setActiveRegionInfoTab] = useState('stats');
-
-
+    const [isFullHeight, setIsFullHeight] = useState(false);
+    const [dragOffset, setDragOffset] = useState(0);
+    const [isDragging, setIsDragging] = useState(false);
+    const startY = useRef(0);
+    const currentY = useRef(0);
+    const startTime = useRef(0);
     const handleProvinceChange = (e) => {
         const provinceCode = e.target.value;
         onSelectionChange({ provinceCode: provinceCode || undefined }, 'province');
     };
+
     const handleKabkotaChange = (e) => {
         const kabkotaCode = e.target.value;
         onSelectionChange({
@@ -127,6 +145,40 @@ const UnifiedSidebar = ({
     const [copyError, setCopyError] = useState(false);
     const copyTimeoutRef = useRef(null);
     const headerColor = regionData?.properties?.nama ? stringToHslColor(regionData.properties.nama) : 'white';
+
+    // Reset CSS variable when closed or unmounted, and set it when open
+    useEffect(() => {
+        if (isMobile) {
+            if (isOpen) {
+                let baseHeight;
+                if (isHidden) baseHeight = `${PEEK_HEIGHT}px`;
+                else if (isFullHeight) baseHeight = `${FULL_HEIGHT_VH}vh`;
+                else baseHeight = `${HALF_HEIGHT_VH}vh`;
+
+                const currentH = parseFloat(baseHeight.includes('vh')
+                    ? (parseFloat(baseHeight) * window.innerHeight / 100)
+                    : parseFloat(baseHeight));
+
+                const clampLimit = window.innerHeight * 0.5;
+                const clampedH = Math.min(currentH, clampLimit);
+
+                document.documentElement.style.setProperty('--mobile-drawer-height', `${clampedH}px`);
+                document.documentElement.style.setProperty('--drawer-transition', 'bottom 0.3s ease-in-out');
+            } else {
+                // Animate to 80px (ActionSidebar height) when closed
+                document.documentElement.style.setProperty('--mobile-drawer-height', '80px');
+                document.documentElement.style.setProperty('--drawer-transition', 'bottom 0.3s ease-in-out');
+            }
+        } else {
+            document.documentElement.style.removeProperty('--mobile-drawer-height');
+            document.documentElement.style.removeProperty('--drawer-transition');
+        }
+
+        return () => {
+            document.documentElement.style.removeProperty('--mobile-drawer-height');
+            document.documentElement.style.removeProperty('--drawer-transition');
+        };
+    }, [isOpen, isMobile, isHidden, isFullHeight]);
 
     const getRegionCodeForStats = () => {
         if (!regionData) return null;
@@ -212,7 +264,7 @@ const UnifiedSidebar = ({
         return (
             <>
                 <div style={{ backgroundColor: headerColor }} className="p-4 text-white relative">
-                    <div className="mt-4 pt-36">
+                    <div className={isMobile ? "mt-2" : "mt-4 pt-36"}>
                         <h3 className="text-2xl font-bold truncate">{title}</h3>
                         <p className="text-lg opacity-90">{subTitle}</p>
                     </div>
@@ -243,9 +295,18 @@ const UnifiedSidebar = ({
                 </div>
                 <div className="p-2 border-t border-gray-200 bg-gray-50">
                     <div className="flex items-center justify-end gap-1">
-                        <Tooltip content={isCopied ? 'Tautan disalin!' : (copyError ? 'Gagal menyalin!' : 'Bagikan')} hideOnClick={false} onHide={resetCopyStatus}>
-                            <button onClick={handleShare} className={`p-2 rounded-md focus:outline-none active:bg-gray-300 transition-colors duration-150 ${isCopied ? 'bg-green-100 text-green-700 hover:bg-green-200' : copyError ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900'}`} aria-label="Bagikan">
-                                <ShareIcon />
+                        <Tooltip content="Salin URL Peta">
+                            <button
+                                onClick={handleShare}
+                                className={`p-2 rounded-md focus:outline-none active:bg-gray-300 transition-all duration-200 ${isCopied
+                                    ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                    : copyError
+                                        ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900'
+                                    }`}
+                                aria-label="Bagikan"
+                            >
+                                {isCopied ? <CheckIcon /> : copyError ? <ErrorIcon /> : <ShareIcon />}
                             </button>
                         </Tooltip>
                     </div>
@@ -256,7 +317,7 @@ const UnifiedSidebar = ({
 
     const renderAdmin = () => (
         <>
-            <div className="pt-20 flex-shrink-0">
+            <div className={`${isMobile ? 'pt-4' : 'pt-20'} flex-shrink-0`}>
                 <div className="border-b border-gray-200">
                     <div className="flex">
                         <TabButton text="Administrasi Lokal" isActive={activeAdminTab === 'admin'} onClick={() => setActiveAdminTab('admin')} />
@@ -284,7 +345,7 @@ const UnifiedSidebar = ({
 
     const renderHistory = () => (
         <>
-            <div className="p-4 border-b flex justify-between items-center pt-20">
+            <div className={`p-4 border-b flex justify-between items-center ${isMobile ? 'pt-4' : 'pt-20'}`}>
                 <h2 className="text-lg font-bold text-gray-800">Riwayat 5 pin terakhir</h2>
             </div>
             <div className="flex-grow p-2.5 overflow-y-auto custom-scrollbar space-y-2.5 bg-gray-50/50">
@@ -331,12 +392,17 @@ const UnifiedSidebar = ({
         </>
     );
 
-    if (!isOpen) {
-        return null;
-    }
+    const lastActiveView = useRef(activeView);
+
+    useEffect(() => {
+        if (activeView) {
+            lastActiveView.current = activeView;
+        }
+    }, [activeView]);
 
     const renderContent = () => {
-        switch (activeView) {
+        const viewToRender = isOpen ? activeView : lastActiveView.current;
+        switch (viewToRender) {
             case 'admin':
                 return renderAdmin();
             case 'regionInfo':
@@ -348,17 +414,151 @@ const UnifiedSidebar = ({
         }
     };
 
+    const PEEK_HEIGHT = 170;
+    const HALF_HEIGHT_VH = 50;
+    const FULL_HEIGHT_VH = 99;
+
+    const handleTouchStart = (e) => {
+        if (!isMobile) return;
+        startY.current = e.touches[0].clientY;
+        currentY.current = startY.current;
+        startTime.current = Date.now();
+        setIsDragging(true);
+    };
+
+    const handleTouchMove = (e) => {
+        if (!isDragging || !isMobile) return;
+        const touchY = e.touches[0].clientY;
+        const deltaY = touchY - startY.current;
+        currentY.current = touchY;
+        setDragOffset(deltaY);
+    };
+
+    const handleTouchEnd = () => {
+        if (!isDragging || !isMobile) return;
+        setIsDragging(false);
+        setDragOffset(0);
+
+        const deltaY = currentY.current - startY.current;
+        const deltaTime = Date.now() - startTime.current;
+        const velocity = Math.abs(deltaY) / deltaTime;
+        const isFlick = velocity > 0.5;
+
+        // Calculate current height state
+        const isPeek = isHidden;
+        const isHalf = !isHidden && !isFullHeight;
+        const isFull = !isHidden && isFullHeight;
+
+        if (isFlick) {
+            if (deltaY < 0) { // Flick Up
+                if (isPeek) onToggleVisibility(); // Peek -> Half
+                else if (isHalf) setIsFullHeight(true); // Half -> Full
+            } else { // Flick Down
+                if (isFull) setIsFullHeight(false); // Full -> Half
+                else if (isHalf) onToggleVisibility(); // Half -> Peek
+            }
+        } else {
+            // Drag logic based on threshold (e.g., 100px)
+            const threshold = 100;
+            if (deltaY < -threshold) { // Drag Up
+                if (isPeek) onToggleVisibility();
+                else if (isHalf) setIsFullHeight(true);
+            } else if (deltaY > threshold) { // Drag Down
+                if (isFull) setIsFullHeight(false);
+                else if (isHalf) onToggleVisibility();
+            }
+        }
+    };
+
+    const handleMobileToggle = () => {
+        if (isHidden) {
+            // Peek -> Half
+            onToggleVisibility();
+        } else if (!isFullHeight) {
+            // Half -> Full
+            setIsFullHeight(true);
+        } else {
+            // Full -> Half
+            setIsFullHeight(false);
+        }
+    };
+
+    const getHeightStyle = () => {
+        if (isMobile) {
+            let baseHeight;
+            if (isHidden) baseHeight = `${PEEK_HEIGHT}px`;
+            else if (isFullHeight) baseHeight = `${FULL_HEIGHT_VH}vh`;
+            else baseHeight = `${HALF_HEIGHT_VH}vh`;
+
+            if (isDragging) {
+                const currentH = parseFloat(baseHeight.includes('vh')
+                    ? (parseFloat(baseHeight) * window.innerHeight / 100)
+                    : parseFloat(baseHeight));
+                const dragH = currentH - dragOffset;
+
+                // Update CSS variable for other components (clamped at 50vh)
+                const clampLimit = window.innerHeight * 0.5;
+                const clampedH = Math.min(dragH, clampLimit);
+                document.documentElement.style.setProperty('--mobile-drawer-height', `${clampedH}px`);
+                document.documentElement.style.setProperty('--drawer-transition', 'none');
+
+                return {
+                    height: `calc(${baseHeight} - ${dragOffset}px)`,
+                    transition: 'none',
+                    transform: 'none'
+                };
+            }
+
+            // Update CSS variable for static states
+            const currentH = parseFloat(baseHeight.includes('vh')
+                ? (parseFloat(baseHeight) * window.innerHeight / 100)
+                : parseFloat(baseHeight));
+            const clampLimit = window.innerHeight * 0.5;
+            const clampedH = Math.min(currentH, clampLimit);
+
+            if (isOpen) {
+                document.documentElement.style.setProperty('--mobile-drawer-height', `${clampedH}px`);
+                document.documentElement.style.setProperty('--drawer-transition', 'bottom 0.3s ease-in-out');
+            }
+
+            return {
+                height: baseHeight,
+                transition: 'height 0.3s ease-in-out, transform 0.3s ease-in-out'
+            };
+        }
+        return { width: REGION_INFO_SIDEBAR_WIDTH };
+    };
+
     return (
         <div
-            className={`absolute top-0 left-0 transition-transform duration-300 ease-in-out shadow-xl h-full bg-white flex flex-col border-r border-gray-100 ${!isHidden ? 'translate-x-0' : '-translate-x-full'}`}
-            style={{ width: REGION_INFO_SIDEBAR_WIDTH }}
+            className={`
+                absolute shadow-xl bg-white flex flex-col pointer-events-auto
+                ${isMobile
+                    ? `bottom-0 left-0 w-full rounded-t-2xl border-t border-gray-200 z-[60] overflow-hidden pb-[90px] transition-transform duration-300 ease-in-out ${isOpen ? 'translate-y-0' : 'translate-y-full pointer-events-none'}`
+                    : `top-0 left-0 h-full border-r border-gray-100 transition-all duration-300 ease-in-out ${isOpen && !isHidden ? 'translate-x-0' : '-translate-x-full pointer-events-none'}`
+                }
+            `}
+            style={getHeightStyle()}
         >
+            {isMobile && (
+                <div
+                    className="w-full flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing flex-shrink-0 touch-none"
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                    onClick={handleMobileToggle}
+                >
+                    <div className="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+                </div>
+            )}
             {renderContent()}
-            <SidebarToggleButton
-                isOpen={!isHidden}
-                onClick={onToggleVisibility}
-                position="left"
-            />
+            {!isMobile && isOpen && (
+                <SidebarToggleButton
+                    isOpen={!isHidden}
+                    onClick={onToggleVisibility}
+                    position="left"
+                />
+            )}
         </div>
     );
 };

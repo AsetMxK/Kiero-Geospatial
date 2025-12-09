@@ -40,11 +40,17 @@ const ActionSidebarButton = ({ icon, text, onClick, isActive }) => (
  * @param {string|null} props.activeSidebar - Nama tampilan sidebar yang sedang aktif, digunakan untuk menyorot tombol yang sesuai.
  * @returns {JSX.Element} Komponen ActionSidebar.
  */
-const ActionSidebar = ({ onButtonClick, activeSidebar }) => {
+const ActionSidebar = ({ onButtonClick, activeSidebar, isMobile }) => {
     return (
         <div
-            className="h-full bg-white shadow-sm p-3 flex flex-col items-center gap-3 border-r border-gray-200 z-20"
-            style={{ width: ACTION_SIDEBAR_WIDTH }}
+            className={`
+                bg-white shadow-sm flex items-center pointer-events-auto
+                ${isMobile
+                    ? 'fixed bottom-0 left-0 right-0 h-auto flex-row justify-around border-t border-gray-200 py-2 px-4 z-[70]'
+                    : 'h-full flex-col gap-3 border-r border-gray-200 p-3 z-20'
+                }
+            `}
+            style={!isMobile ? { width: ACTION_SIDEBAR_WIDTH } : {}}
         >
             <ActionSidebarButton
                 icon={<WilayahIcon />}

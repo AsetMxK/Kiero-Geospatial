@@ -325,17 +325,13 @@ const MapPage = () => {
 
             let targetPin;
             if (existingPin) {
-                console.log('Using existing pin:', existingPin);
                 targetPin = existingPin;
             } else {
-                console.log('Creating new pin. isTemporary:', isTemporary);
                 if (isTemporary) {
                     targetPin = { ...newPinData, id: generatePinId() };
-                    console.log('Created temporary pin:', targetPin);
                     setPins(prevPins => [...prevPins, targetPin]);
                 } else {
                     targetPin = addPinToHistory(newPinData);
-                    console.log('Created permanent pin:', targetPin);
                     setPins(prevPins => [...prevPins, targetPin].slice(-5));
                 }
             }
@@ -478,6 +474,16 @@ const MapPage = () => {
             if (isDataReady) { setIsNavigating(false); }
         }
     }, [isNavigating, currentSelection, kabkotaLoading, kecamatanLoading, desaLoading]);
+
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 900);
+
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 900);
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     useEffect(() => {
         const checkDevice = () => { setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0); };
@@ -898,6 +904,7 @@ const MapPage = () => {
                         <MapComponent
                             isRegionSidebarOpen={isUnifiedSidebarOpen}
                             isTouchDevice={isTouchDevice}
+                            isMobile={isMobile}
                             selection={currentSelection}
                             isNavigating={isNavigating}
                             onInfoChange={setRawInfoData}
@@ -945,21 +952,49 @@ const MapPage = () => {
                         style={{ transitionProperty: 'opacity, visibility', transitionDelay: isStreetViewVisible ? '0ms, 300ms' : '0ms, 0ms' }}
                     >
                         <div className="relative w-full h-full">
-                            <div className="absolute top-4 pointer-events-auto z-30 transition-all duration-300 ease-in-out" style={{ left: `calc(${ACTION_SIDEBAR_WIDTH}px + 1rem)`, width: `calc(${REGION_INFO_SIDEBAR_WIDTH}px - 2rem)` }}>
-                                <SearchBar onPlaceSelect={handlePlaceSelect} />
-                            </div>
-                            <div className="absolute top-4 pointer-events-auto z-30" style={{ left: `calc(${ACTION_SIDEBAR_WIDTH}px + ${REGION_INFO_SIDEBAR_WIDTH}px + 2rem)` }}>
-                                <FilterPills
-                                    selectedCategory={categorySelection}
-                                    onCategoryChange={setCategorySelection}
-                                    categoriesData={categories}
-                                    categoriesLoading={categoriesLoading}
-                                    dateRange={dateRange}
-                                    onDateRangeChange={setDateRange} />
-                            </div>
-                            <div className="absolute top-0 left-0 h-full pointer-events-auto flex z-20">
-                                <ActionSidebar onButtonClick={handleSidebarButtonClick} activeSidebar={activeSidebar} />
-                                <div className="relative h-full">
+                            {/* Responsive Search and Filter Layout */}
+                            {isMobile ? (
+                                // Mobile Layout
+                                <div className="absolute top-4 left-4 right-4 z-30 flex flex-col gap-3 pointer-events-none">
+                                    <div className="pointer-events-auto w-full shadow-sm rounded-full">
+                                        <SearchBar onPlaceSelect={handlePlaceSelect} />
+                                    </div>
+                                    <div className="pointer-events-auto w-full overflow-x-auto pb-2 no-scrollbar">
+                                        <div className="min-w-max">
+                                            <FilterPills
+                                                selectedCategory={categorySelection}
+                                                onCategoryChange={setCategorySelection}
+                                                categoriesData={categories}
+                                                categoriesLoading={categoriesLoading}
+                                                dateRange={dateRange}
+                                                onDateRangeChange={setDateRange}
+                                                isMobile={isMobile}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                // Desktop Layout (Original)
+                                <>
+                                    <div className="absolute top-4 pointer-events-auto z-30 transition-all duration-300 ease-in-out" style={{ left: `calc(${ACTION_SIDEBAR_WIDTH}px + 1rem)`, width: `calc(${REGION_INFO_SIDEBAR_WIDTH}px - 2rem)` }}>
+                                        <SearchBar onPlaceSelect={handlePlaceSelect} />
+                                    </div>
+                                    <div className="absolute top-4 pointer-events-auto z-30" style={{ left: `calc(${ACTION_SIDEBAR_WIDTH}px + ${REGION_INFO_SIDEBAR_WIDTH}px + 2rem)` }}>
+                                        <FilterPills
+                                            selectedCategory={categorySelection}
+                                            onCategoryChange={setCategorySelection}
+                                            categoriesData={categories}
+                                            categoriesLoading={categoriesLoading}
+                                            dateRange={dateRange}
+                                            onDateRangeChange={setDateRange}
+                                            isMobile={isMobile}
+                                        />
+                                    </div>
+                                </>
+                            )}
+                            <div className={`absolute top-0 left-0 h-full flex ${isMobile ? 'z-[60] w-full pointer-events-none' : 'z-20 pointer-events-auto'}`}>
+                                <ActionSidebar onButtonClick={handleSidebarButtonClick} activeSidebar={activeSidebar} isMobile={isMobile} />
+                                <div className={`relative h-full ${isMobile ? 'w-full' : ''}`}>
                                     <UnifiedSidebar
                                         isOpen={isUnifiedSidebarOpen}
                                         isHidden={isSidebarHidden}
@@ -977,11 +1012,12 @@ const MapPage = () => {
                                         onDeletePin={handleDeletePin}
                                         mapLayer={mapLayer}
                                         onMapLayerChange={setMapLayer}
+                                        isMobile={isMobile}
                                     />
                                 </div>
                             </div>
 
-                            <MapControls isFullscreen={isFullscreen} onToggleFullscreen={handleToggleFullscreen} onBack={handleBack} isBackDisabled={navigationHistory.current.length <= 1} isPinningMode={isPinningMode} onTogglePinMode={() => setIsPinningMode(!isPinningMode)} />
+                            <MapControls isFullscreen={isFullscreen} onToggleFullscreen={handleToggleFullscreen} onBack={handleBack} isBackDisabled={navigationHistory.current.length <= 1} isPinningMode={isPinningMode} onTogglePinMode={() => setIsPinningMode(!isPinningMode)} isMobile={isMobile} />
                             <>
                                 <MapLayerControl
                                     mapLayer={mapLayer}
@@ -989,6 +1025,7 @@ const MapPage = () => {
                                     isStreetViewVisible={isStreetViewLayerActive}
                                     onStreetViewVisibilityChange={setIsStreetViewLayerActive}
                                     style={{ left: `calc(${ACTION_SIDEBAR_WIDTH}px + ${layerButtonOffset}px + 1rem)` }}
+                                    isMobile={isMobile}
                                 />
                             </>
                         </div>

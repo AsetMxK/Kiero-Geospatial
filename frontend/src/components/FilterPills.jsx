@@ -33,7 +33,8 @@ const FilterPills = ({
     dateRange,
     onDateRangeChange,
     categoriesData,
-    categoriesLoading
+    categoriesLoading,
+    isMobile
 }) => {
     const [isCategoryOpen, setIsCategoryOpen] = useState(false);
     const {
@@ -126,6 +127,7 @@ const FilterPills = ({
                             ref={categoryRefs.setFloating}
                             style={categoryFloatingStyles}
                             {...getCategoryFloatingProps()}
+                            className="z-[100]"
                         >
                             <div className="p-2 bg-white rounded-xl shadow-xl border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
                                 <CustomSelectDropdown
@@ -165,10 +167,12 @@ const FilterPills = ({
                             ref={dateRefs.setFloating}
                             style={dateFloatingStyles}
                             {...getDateFloatingProps()}
+                            className="z-[100]"
                         >
                             <DateRangePicker
                                 dateRange={dateRange}
                                 onDateRangeChange={onDateRangeChange}
+                                isMobile={isMobile}
                             />
                         </div>
                     )}

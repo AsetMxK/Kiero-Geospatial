@@ -50,7 +50,7 @@ const staticRanges = createStaticRanges([
  * @param {Function} props.onDateRangeChange - Fungsi callback yang dipanggil dengan objek rentang tanggal baru saat pengguna membuat pilihan.
  * @returns {JSX.Element} Komponen DateRangePicker.
  */
-const DateRangePicker = ({ dateRange, onDateRangeChange }) => {
+const DateRangePicker = ({ dateRange, onDateRangeChange, isMobile }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [popupPosition, setPopupPosition] = useState({ top: 0, left: 0 });
     const buttonRef = useRef(null);
@@ -78,8 +78,8 @@ const DateRangePicker = ({ dateRange, onDateRangeChange }) => {
             const rect = buttonRef.current.getBoundingClientRect();
             let left = rect.left + window.scrollX;
 
-            // Check for overflow (assuming approx 600px width for 2 months + sidebar)
-            const calendarWidth = 600;
+            // Check for overflow (assuming approx 600px width for 2 months + sidebar, or 350px for 1 month)
+            const calendarWidth = isMobile ? 350 : 600;
             const viewportWidth = window.innerWidth;
 
             if (left + calendarWidth > viewportWidth) {
@@ -124,18 +124,26 @@ const DateRangePicker = ({ dateRange, onDateRangeChange }) => {
         return createPortal(
             <div
                 ref={popupRef}
-                className="fixed z-50 mt-1 w-auto bg-white shadow-lg rounded-md border border-gray-200"
+                className={`fixed z-50 mt-1 w-auto bg-white shadow-lg rounded-md border border-gray-200 ${isMobile ? 'mobile-date-picker' : ''}`}
                 style={{ top: `${popupPosition.top}px`, left: `${popupPosition.left}px` }}
             >
+                {isMobile && (
+                    <style>{`
+                        .mobile-date-picker .rdrDefinedRangesWrapper {
+                            display: none;
+                        }
+                    `}</style>
+                )}
                 <ReactDateRangePicker
                     editableDateInputs={true}
                     onChange={handleOnChange}
                     moveRangeOnFirstSelection={false}
                     ranges={[dateRange]}
                     locale={id}
-                    months={2}
+                    months={isMobile ? 1 : 2}
                     direction="vertical"
-                    staticRanges={staticRanges}
+                    staticRanges={isMobile ? [] : staticRanges}
+                    inputRanges={isMobile ? [] : undefined}
                 />
             </div>,
             document.body
