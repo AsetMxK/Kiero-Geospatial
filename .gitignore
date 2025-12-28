@@ -24,8 +24,15 @@ dist-ssr
 *.sln
 *.sw?
 # app
-.env
+.env*
+!.env.example
 .next/
 *.pem
 archives
 *.csv
+*.txt
+*.pdf
+keys/
+temp_upload/
+# Stress test scripts - DO NOT DEPLOY
+scripts/

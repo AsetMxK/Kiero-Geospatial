@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import geoRouter from './routes/geo.js';
+import geoRouter, { warmCache } from './routes/geo.js';
 import categoryRouter from './routes/categories.js';
 import ticketsRouter from './routes/tickets.js';
 import regionsRouter from './routes/regions.js';
@@ -59,9 +59,11 @@ const startServer = async () => {
     res.status(404).json({ error: "Not Found", message: `The requested URL ${req.originalUrl} was not found on this server.` });
   });
 
-  app.listen(port, () => {
+  app.listen(port, async () => {
     console.log(`🛡️ Resource Server is running internally on http://localhost:${port}`);
     startArchiveScheduler();
+    // Pre-warm geo cache untuk menghindari cold-start latency
+    await warmCache();
   });
 
   return app;

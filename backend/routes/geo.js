@@ -7,6 +7,93 @@ const router = express.Router();
 
 router.use(authMiddleware);
 
+// ============================================================================
+// CACHING SYSTEM - In-memory cache untuk data geospasial statis
+// ============================================================================
+
+/**
+ * Cache store dengan TTL (Time To Live).
+ * Key: cache identifier (e.g., 'provinsi', 'kab-kota-62')
+ * Value: { data: any, timestamp: number }
+ */
+const geoCache = new Map();
+
+// Cache TTL: 1 jam (data geografis jarang berubah)
+const CACHE_TTL_MS = 60 * 60 * 1000;
+
+/**
+ * Mengambil data dari cache jika masih valid.
+ * @param {string} key - Cache key
+ * @returns {any|null} Cached data atau null jika expired/tidak ada
+ */
+const getFromCache = (key) => {
+  const cached = geoCache.get(key);
+  if (!cached) return null;
+
+  const isExpired = Date.now() - cached.timestamp > CACHE_TTL_MS;
+  if (isExpired) {
+    geoCache.delete(key);
+    return null;
+  }
+
+  return cached.data;
+};
+
+/**
+ * Menyimpan data ke cache.
+ * @param {string} key - Cache key
+ * @param {any} data - Data untuk di-cache
+ */
+const setToCache = (key, data) => {
+  geoCache.set(key, {
+    data,
+    timestamp: Date.now()
+  });
+};
+
+/**
+ * Pre-warm cache dengan data yang sering diakses.
+ * Dipanggil saat aplikasi startup untuk menghindari cold-start latency.
+ * @export
+ * @async
+ */
+export const warmCache = async () => {
+  console.log('🔥 Warming geo cache...');
+  try {
+    const query = Prisma.sql`
+      SELECT DISTINCT id, level, tipe_adm, nama, kode_prov, kode_kab, kode_kec, luas, ST_AsGeoJSON(geom) as geom_geojson 
+      FROM regions 
+      WHERE level = 'provinsi'`;
+
+    const results = await prisma.$queryRaw(query);
+    const features = [];
+    for (const item of results) {
+      let geometry = null;
+      if (item.geom_geojson) {
+        try {
+          geometry = JSON.parse(item.geom_geojson);
+        } catch (e) {
+          continue;
+        }
+      }
+      const { geom_geojson, ...properties } = item;
+      features.push({ type: "Feature", properties, geometry });
+    }
+
+    const responseData = {
+      message: "Data retrieved successfully",
+      data: features
+    };
+
+    setToCache('geo:provinsi', responseData);
+    console.log(`✅ Cache warmed: geo:provinsi (${features.length} provinces)`);
+  } catch (error) {
+    console.error('⚠️ Failed to warm cache:', error.message);
+  }
+};
+
+// ============================================================================
+
 /**
  * Memformat array hasil query database menjadi array GeoJSON FeatureCollection.
  * Setiap item hasil dikonversi menjadi sebuah GeoJSON Feature, dengan geometrinya di-parse
@@ -50,22 +137,39 @@ const formatResultsToGeoJSON = (results) => {
 
 /**
  * Mengeksekusi query geospasial mentah menggunakan Prisma, memformat hasilnya ke GeoJSON,
- * dan mengirimkan respons. Fungsi bantuan ini memusatkan blok try-catch,
- * format hasil, dan logika pengiriman respons untuk semua endpoint API GeoJSON.
+ * dan mengirimkan respons. Mendukung caching opsional untuk data statis.
  *
  * @async
  * @param {import('express').Response} res - Objek response Express.
  * @param {Prisma.Sql} queryTemplate - Template query SQL mentah untuk dieksekusi.
+ * @param {string} [cacheKey] - Opsional. Jika disediakan, hasil akan di-cache.
  * @returns {Promise<void>} Sebuah promise yang me-resolve ketika respons telah dikirim.
  */
-const executeAndFormatGeoQuery = async (res, queryTemplate) => {
+const executeAndFormatGeoQuery = async (res, queryTemplate, cacheKey = null) => {
   try {
+    // Cek cache terlebih dahulu jika cacheKey disediakan
+    if (cacheKey) {
+      const cachedData = getFromCache(cacheKey);
+      if (cachedData) {
+        res.set('X-Cache', 'HIT');
+        return res.json(cachedData);
+      }
+    }
+
     const results = await prisma.$queryRaw(queryTemplate);
     const features = formatResultsToGeoJSON(results);
-    res.json({
+    const responseData = {
       message: "Data retrieved successfully",
       data: features
-    });
+    };
+
+    // Simpan ke cache jika cacheKey disediakan
+    if (cacheKey) {
+      setToCache(cacheKey, responseData);
+      res.set('X-Cache', 'MISS');
+    }
+
+    res.json(responseData);
   } catch (error) {
     console.error('Geo query error:', error);
     res.locals.errorMessage = error.stack;
@@ -88,7 +192,8 @@ router.get('/provinsi', async (req, res) => {
     SELECT DISTINCT id, level, tipe_adm, nama, kode_prov, kode_kab, kode_kec, luas, ST_AsGeoJSON(geom) as geom_geojson 
     FROM regions 
     WHERE level = 'provinsi'`;
-  await executeAndFormatGeoQuery(res, query);
+  // Cache provinsi data (jarang berubah)
+  await executeAndFormatGeoQuery(res, query, 'geo:provinsi');
 });
 
 /**
@@ -106,7 +211,8 @@ router.get('/kab-kota/:provinceCode', async (req, res) => {
     SELECT DISTINCT id, level, tipe_adm, nama, kode_prov, kode_kab, kode_kec, luas, ST_AsGeoJSON(geom) as geom_geojson 
     FROM regions 
     WHERE level = 'kab_kota' AND kode_prov = ${provinceCode}`;
-  await executeAndFormatGeoQuery(res, query);
+  // Cache per provinsi
+  await executeAndFormatGeoQuery(res, query, `geo:kab-kota:${provinceCode}`);
 });
 
 /**

@@ -77,6 +77,11 @@ router.use(cors(corsOptionsDelegate));
 router.use(tokenValidationMiddleware);
 
 router.use('/', proxy(process.env.RESOURCE_SERVER_URL, {
+  timeout: 30000,
+  proxyReqOptDecorator: (proxyReqOpts) => {
+    proxyReqOpts.timeout = 30000;
+    return proxyReqOpts;
+  },
   proxyErrorHandler: (err, res, next) => {
     console.error('Proxy error:', err);
     res.locals.errorMessage = err.stack;

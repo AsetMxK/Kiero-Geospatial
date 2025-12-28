@@ -1,0 +1,112 @@
+services:
+  # --- Service 1: Geo Gateway ---
+  gateway:
+    build: ./geo-gateway
+    restart: always
+    # Ports hidden by default for security, uncomment if needed for debug
+    # ports:
+    #   - "${GATEWAY_PORT:-4000}:4000"
+    environment:
+      - PORT=${GATEWAY_PORT:-4000}
+      - NODE_ENV=${NODE_ENV:-production}
+      # Database Connection
+      - DATABASE_URL=${GATEWAY_DATABASE_URL}
+      # URL Identifiers
+      - GATEWAY_URL=${GATEWAY_URL:-http://localhost:4000}
+      - RESOURCE_SERVER_URL=${RESOURCE_SERVER_URL:-http://backend:3000}
+      # Keys
+      - GATEWAY_PRIVATE_KEY_PATH=/app/keys/gateway_private.pem
+      - GATEWAY_PUBLIC_KEY_PATH=/app/keys/gateway_public.pem
+    volumes:
+      - ./keys:/app/keys:ro
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "4000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 384M
+        reservations:
+          cpus: '0.1'
+          memory: 192M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # --- Service 2: Backend ---
+  backend:
+    build: ./backend
+    restart: always
+    # Ports hidden by default for security, uncomment if needed for debug
+    # ports:
+    #   - "${BACKEND_PORT:-3000}:3000"
+    environment:
+      - PORT=${BACKEND_PORT:-3000}
+      - NODE_ENV=${NODE_ENV:-production}
+      - DATABASE_URL=${BACKEND_DATABASE_URL}
+      - GATEWAY_ISSUER_URL=${GATEWAY_URL:-http://localhost:4000}
+      - GATEWAY_PUBLIC_KEY_PATH=/app/keys/gateway_public.pem
+    volumes:
+      - ./keys:/app/keys:ro
+    depends_on:
+      gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 768M
+        reservations:
+          cpus: '0.5'
+          memory: 384M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # --- Service 3: Frontend ---
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        - VITE_GOOGLE_MAPS_API_KEY=${VITE_GOOGLE_MAPS_API_KEY}
+        - VITE_CLIENT_ID=${VITE_CLIENT_ID}
+        - VITE_GATEWAY_URL=${VITE_GATEWAY_URL:-${GATEWAY_URL:-http://localhost:4000}}
+    restart: always
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+      - "443:443"
+    volumes:
+      - ./keys/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - gateway
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

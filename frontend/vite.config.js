@@ -2,7 +2,7 @@ import react from '@vitejs/plugin-react';
 
 export default {
     plugins: [react()],
-    base: '/mendawai-geospatial/',
+    base: '/',
     build: {
         target: 'es2020',
         chunkSizeWarningLimit: 1000,
