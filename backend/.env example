@@ -11,7 +11,3 @@ GATEWAY_ISSUER_URL="http://localhost:4000"
 # Backend menggunakan kunci ini untuk memverifikasi tanda tangan access_token.
 # Path ini relatif dari direktori 'backend'. Pastikan file ini ada.
 GATEWAY_PUBLIC_KEY_PATH="../geo-gateway/gateway_public.pem"
-
-# Konfigurasi /scripts
-API_ENDPOINT_URL="http://localhost:3000/v1/update-geo"
-REQUEST_DELAY_SECONDS=0.5

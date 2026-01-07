@@ -548,7 +548,7 @@ const IframeFullMapPage = () => {
     const panToWithOffset = useCallback((target, zoom) => {
         if (!mapInstance) return;
 
-        const isSidebarVisible = (activeSidebar === 'wilayah' || activeSidebar === 'regionInfo' || activeSidebar === 'history') && !isSidebarHidden;
+        const isSidebarVisible = (activeSidebar === 'wilayah' || activeSidebar === 'regionInfo' || activeSidebar === 'history' || activeSidebar === 'geoAi') && !isSidebarHidden;
         const totalOffset = (ACTION_SIDEBAR_WIDTH + (isSidebarVisible ? REGION_INFO_SIDEBAR_WIDTH : 0)) / 2;
 
         const projection = mapInstance.getProjection();
@@ -912,7 +912,7 @@ const IframeFullMapPage = () => {
 
 
 
-    const isUnifiedSidebarOpen = activeSidebar === 'wilayah' || activeSidebar === 'regionInfo' || activeSidebar === 'history' || activeSidebar === 'layers';
+    const isUnifiedSidebarOpen = activeSidebar === 'wilayah' || activeSidebar === 'regionInfo' || activeSidebar === 'history' || activeSidebar === 'layers' || activeSidebar === 'geoAi';
     const layerButtonOffset = isUnifiedSidebarOpen && !isSidebarHidden ? REGION_INFO_SIDEBAR_WIDTH : 0;
 
     const getSidebarView = () => {
@@ -925,6 +925,8 @@ const IframeFullMapPage = () => {
                 return 'history';
             case 'layers':
                 return 'layers';
+            case 'geoAi':
+                return 'geoAi';
             default:
                 return 'admin'; // Default view
         }

@@ -100,6 +100,11 @@ const UnifiedSidebar = ({
     const [isFullHeight, setIsFullHeight] = useState(false);
     const [dragOffset, setDragOffset] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
+
+    // State untuk Geo AI
+    const [aiInput, setAiInput] = useState('');
+    const [aiMessages, setAiMessages] = useState([]);
+    const [isAiLoading, setIsAiLoading] = useState(false);
     const startY = useRef(0);
     const currentY = useRef(0);
     const startTime = useRef(0);
@@ -394,6 +399,155 @@ const UnifiedSidebar = ({
         </>
     );
 
+    /**
+     * Fungsi untuk mengirim pesan ke AI
+     */
+    const handleAiSubmit = async (e) => {
+        e.preventDefault();
+        if (!aiInput.trim() || isAiLoading) return;
+
+        const userMessage = { role: 'user', content: aiInput.trim() };
+        setAiMessages(prev => [...prev, userMessage]);
+        setAiInput('');
+        setIsAiLoading(true);
+
+        try {
+            // TODO: Implementasi API call ke backend AI
+            // Untuk sementara, simulasi response
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            const aiResponse = {
+                role: 'assistant',
+                content: `Terima kasih atas pertanyaanmu tentang "${userMessage.content}". Fitur Geo AI sedang dalam tahap pengembangan. Segera kami akan dapat membantu Anda dengan analisis geografis, pencarian lokasi, dan informasi wilayah berbasis AI.`
+            };
+            setAiMessages(prev => [...prev, aiResponse]);
+        } catch (error) {
+            const errorMessage = {
+                role: 'assistant',
+                content: 'Maaf, terjadi kesalahan saat memproses permintaan Anda. Silakan coba lagi.',
+                isError: true
+            };
+            setAiMessages(prev => [...prev, errorMessage]);
+        } finally {
+            setIsAiLoading(false);
+        }
+    };
+
+    const renderGeoAi = () => (
+        <>
+            {/* Header - Centered Horizontal */}
+            <div className={`p-4 border-b bg-gradient-to-r from-blue-600 to-purple-600 text-white ${isMobile ? 'pt-4' : 'pt-20'}`}>
+                <div className="flex items-center justify-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-bold">Geo AI Assistant</h2>
+                        <p className="text-sm text-white/80">Tanya tentang wilayah & lokasi</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Chat Messages Area */}
+            <div className="flex-grow overflow-y-auto custom-scrollbar p-4 space-y-4 bg-gray-50/50">
+                {aiMessages.length === 0 ? (
+                    <div className="text-center py-8">
+                        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-100 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8 text-blue-600">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
+                            </svg>
+                        </div>
+                        <h3 className="text-gray-700 font-semibold mb-2">Halo! Saya Geo AI</h3>
+                        <p className="text-sm text-gray-500 max-w-xs mx-auto">
+                            Tanyakan tentang informasi geografis, wilayah administratif, atau bantu temukan lokasi tertentu.
+                        </p>
+                        <div className="mt-4 flex flex-wrap justify-center gap-2">
+                            {['Dimana Jakarta?', 'Info provinsi Jawa Barat', 'Luas wilayah Bandung'].map((suggestion, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={() => setAiInput(suggestion)}
+                                    className="px-3 py-1.5 text-xs bg-white border border-gray-200 rounded-full text-gray-600 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-colors"
+                                >
+                                    {suggestion}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                ) : (
+                    aiMessages.map((msg, idx) => (
+                        <div
+                            key={idx}
+                            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                        >
+                            <div
+                                className={`max-w-[85%] rounded-2xl px-4 py-3 ${msg.role === 'user'
+                                    ? 'bg-blue-600 text-white rounded-br-md'
+                                    : msg.isError
+                                        ? 'bg-red-50 text-red-700 border border-red-200 rounded-bl-md'
+                                        : 'bg-white text-gray-800 border border-gray-200 shadow-sm rounded-bl-md'
+                                    }`}
+                            >
+                                <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                            </div>
+                        </div>
+                    ))
+                )}
+                {isAiLoading && (
+                    <div className="flex justify-start">
+                        <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
+                            <div className="flex items-center gap-2">
+                                <div className="flex space-x-1">
+                                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                                </div>
+                                <span className="text-xs text-gray-500">AI sedang berpikir...</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Input Area */}
+            {/* Input Area - Centered and Modern */}
+            <div className="flex-shrink-0 border-t border-gray-200 bg-white p-4">
+                <form onSubmit={handleAiSubmit} className="max-w-lg mx-auto">
+                    <div className="flex items-center gap-2 bg-gray-100 rounded-full p-1.5 pl-4 border border-gray-200 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent transition-all">
+                        <textarea
+                            value={aiInput}
+                            onChange={(e) => setAiInput(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleAiSubmit(e);
+                                }
+                            }}
+                            placeholder="Tanyakan sesuatu tentang wilayah..."
+                            className="flex-1 bg-transparent text-sm resize-none focus:outline-none py-2 custom-scrollbar placeholder-gray-500"
+                            rows={1}
+                            style={{ maxHeight: '80px', minHeight: '24px' }}
+                            disabled={isAiLoading}
+                        />
+                        <button
+                            type="submit"
+                            disabled={!aiInput.trim() || isAiLoading}
+                            className={`flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 ${aiInput.trim() && !isAiLoading
+                                ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md hover:shadow-lg'
+                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                }`}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                                <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
+                            </svg>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </>
+    );
+
     const lastActiveView = useRef(activeView);
 
     useEffect(() => {
@@ -411,6 +565,8 @@ const UnifiedSidebar = ({
                 return renderRegionInfo();
             case 'history':
                 return renderHistory();
+            case 'geoAi':
+                return renderGeoAi();
             default:
                 return null;
         }
