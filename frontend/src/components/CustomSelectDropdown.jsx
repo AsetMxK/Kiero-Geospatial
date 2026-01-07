@@ -9,7 +9,7 @@ import Tooltip from './Tooltip';
  * @returns {JSX.Element} Elemen SVG untuk ikon chevron.
  */
 const ChevronDownIcon = ({ disabled }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={`w-5 h-5 transition-colors ${disabled ? 'text-gray-300' : 'text-gray-400 group-hover:text-gray-600'}`}>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={`w-4 h-4 transition-colors ${disabled ? 'text-gray-300' : 'text-gray-400 group-hover:text-gray-600'}`}>
         <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
     </svg>
 );
@@ -152,7 +152,7 @@ const CustomSelectDropdown = ({ label, placeholder, disabled = false, options = 
                         onClick={() => !disabled && setIsOpen(!isOpen)}
                         onKeyDown={handleKeyDown}
                         className={`
-                            group w-full pl-3 pr-2 py-2.5 text-sm text-left rounded-xl border transition-all duration-200
+                            group w-full pl-2.5 pr-2 py-1.5 text-xs text-left rounded-lg border transition-all duration-200
                             grid grid-cols-1 items-center shadow-sm
                             ${disabled
                                 ? 'bg-gray-50 border-gray-200 cursor-not-allowed opacity-75'
@@ -175,7 +175,7 @@ const CustomSelectDropdown = ({ label, placeholder, disabled = false, options = 
                 </Tooltip>
 
                 {isOpen && (
-                    <div className="absolute z-50 mt-2 w-full bg-white shadow-xl rounded-xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top">
+                    <div className="absolute z-50 mt-1.5 w-full bg-white shadow-xl rounded-lg border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top">
                         {/* Search Input */}
                         <div className="p-2 border-b border-gray-100 bg-gray-50/50 sticky top-0">
                             <div className="relative">
@@ -187,7 +187,7 @@ const CustomSelectDropdown = ({ label, placeholder, disabled = false, options = 
                                 <input
                                     ref={searchInputRef}
                                     type="text"
-                                    className="block w-full pl-9 pr-3 py-1.5 border border-gray-200 rounded-lg leading-5 bg-white placeholder-gray-400 focus:outline-none focus:placeholder-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 sm:text-sm transition-colors"
+                                    className="block w-full pl-8 pr-2 py-1 border border-gray-200 rounded-md leading-5 bg-white placeholder-gray-400 focus:outline-none focus:placeholder-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-xs transition-colors"
                                     placeholder="Cari..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -200,13 +200,13 @@ const CustomSelectDropdown = ({ label, placeholder, disabled = false, options = 
                         <ul className="max-h-60 overflow-auto custom-scrollbar py-1 scroll-p-1">
                             <li
                                 onClick={() => handleOptionClick('')}
-                                className="text-gray-500 italic cursor-pointer select-none relative py-2.5 pl-4 pr-2 hover:bg-gray-50 transition-colors text-sm"
+                                className="text-gray-500 italic cursor-pointer select-none relative py-1.5 pl-3 pr-2 hover:bg-gray-50 transition-colors text-xs"
                             >
                                 {placeholder}
                             </li>
 
                             {filteredOptions.length === 0 ? (
-                                <li className="text-gray-400 text-center py-3 text-sm italic">
+                                <li className="text-gray-400 text-center py-2 text-xs italic">
                                     Tidak ada hasil
                                 </li>
                             ) : (
@@ -222,7 +222,7 @@ const CustomSelectDropdown = ({ label, placeholder, disabled = false, options = 
                                             <li
                                                 key={`${opt.value}-${index}`}
                                                 ref={(el) => (itemRefs.current[index] = el)}
-                                                className="text-xs font-bold text-gray-400 uppercase tracking-wider select-none relative py-2 pl-4 pr-2 bg-gray-50/50 mt-1 first:mt-0"
+                                                className="text-[10px] font-bold text-gray-400 uppercase tracking-wider select-none relative py-1.5 pl-3 pr-2 bg-gray-50/50 mt-1 first:mt-0"
                                             >
                                                 {opt.name}
                                             </li>
@@ -235,7 +235,7 @@ const CustomSelectDropdown = ({ label, placeholder, disabled = false, options = 
                                             ref={(el) => (itemRefs.current[index] = el)}
                                             onClick={() => handleOptionClick(opt.value)}
                                             className={`
-                                                cursor-pointer select-none relative py-2.5 pl-4 pr-2 text-sm
+                                                cursor-pointer select-none relative py-1.5 pl-3 pr-2 text-xs
                                                 ${isSelected ? 'bg-blue-50 text-blue-700' : ''}
                                                 ${isHighlighted && !isSelected ? 'bg-blue-50' : ''}
                                                 ${!isSelected && !isHighlighted ? 'text-gray-700 hover:bg-gray-50 hover:text-gray-900' : ''}

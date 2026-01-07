@@ -29,12 +29,12 @@ const MapControls = ({
   isMobile,
 }) => {
   return (
-    <div className={`absolute ${isMobile ? 'right-4' : 'top-4 right-4'} z-20 flex flex-col gap-3 pointer-events-auto`} style={isMobile ? { bottom: 'calc(var(--mobile-drawer-height, 80px) + 16px)', transition: 'var(--drawer-transition, bottom 0.3s ease-in-out)' } : {}}>
+    <div className={`absolute ${isMobile ? 'right-4' : 'top-4 right-4'} z-20 flex flex-col gap-2 pointer-events-auto`} style={isMobile ? { bottom: 'calc(var(--mobile-drawer-height, 80px) + 16px)', transition: 'var(--drawer-transition, bottom 0.3s ease-in-out)' } : {}}>
       <Tooltip content={isFullscreen ? 'Keluar Layar Penuh' : 'Masuk Layar Penuh'}>
         <button
           onClick={onToggleFullscreen}
           className={`
-            p-2.5 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center
+            p-2 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center
             ${isFullscreen
               ? 'bg-blue-50 text-blue-600 ring-2 ring-blue-600'
               : 'bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900'
@@ -50,7 +50,7 @@ const MapControls = ({
           onClick={onTogglePinMode}
           data-testid="pin-mode-toggle"
           className={`
-            p-2.5 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center
+            p-2 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center
             ${isPinningMode
               ? 'bg-blue-50 text-blue-600 ring-2 ring-blue-600'
               : 'bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900'
@@ -65,7 +65,7 @@ const MapControls = ({
         <button
           onClick={onBack}
           disabled={isBackDisabled}
-          className="bg-white p-2.5 rounded-full shadow-lg hover:shadow-xl hover:bg-gray-50 text-gray-600 hover:text-gray-900 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center"
+          className="bg-white p-2 rounded-full shadow-lg hover:shadow-xl hover:bg-gray-50 text-gray-600 hover:text-gray-900 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center"
         >
           <BackIcon />
         </button>

@@ -157,9 +157,9 @@ const DateRangePicker = ({ dateRange, onDateRangeChange, isMobile }) => {
                 type="button"
                 onClick={handleToggle}
                 className={`
-                    w-full pl-3 pr-10 py-2.5 text-left bg-white border border-gray-200 rounded-xl shadow-sm 
+                    w-full pl-2.5 pr-8 py-1.5 text-left bg-white border border-gray-200 rounded-lg shadow-sm 
                     cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 
-                    text-sm text-gray-700 hover:border-blue-400 transition-all duration-200
+                    text-xs text-gray-700 hover:border-blue-400 transition-all duration-200
                 `}
             >
                 <span className="truncate font-medium">{formattedDate}</span>

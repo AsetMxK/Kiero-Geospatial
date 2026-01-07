@@ -111,14 +111,14 @@ const FilterPills = ({
                     ref={categoryRefs.setReference}
                     {...getCategoryReferenceProps()}
                     className={`
-                        flex items-center gap-2 px-4 py-2 rounded-full shadow-sm border text-sm font-medium transition-all duration-200
+                        flex items-center gap-1.5 px-3 py-1.5 rounded-full shadow-sm border text-xs font-medium transition-all duration-200
                         ${selectedCategory
                             ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-md'
                             : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300'
                         }
                     `}
                 >
-                    <KategoriIcon className="w-4 h-4" />
+                    <KategoriIcon className="w-3.5 h-3.5" />
                     <span>{selectedCategory ? (categories.find(c => c.id === selectedCategory)?.category_name || 'Kategori Terpilih') : 'Semua Kategori'}</span>
                 </button>
                 <FloatingPortal>
@@ -151,14 +151,14 @@ const FilterPills = ({
                     ref={dateRefs.setReference}
                     {...getDateReferenceProps()}
                     className={`
-                        flex items-center gap-2 px-4 py-2 rounded-full shadow-sm border text-sm font-medium transition-all duration-200
+                        flex items-center gap-1.5 px-3 py-1.5 rounded-full shadow-sm border text-xs font-medium transition-all duration-200
                         ${!isDateDefault
                             ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-md'
                             : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300'
                         }
                      `}
                 >
-                    <CalendarIcon className="w-4 h-4" />
+                    <CalendarIcon className="w-3.5 h-3.5" />
                     <span>{isDateDefault ? '30 Hari Terakhir' : formattedDateRange}</span>
                 </button>
                 <FloatingPortal>
