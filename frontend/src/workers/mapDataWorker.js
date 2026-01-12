@@ -45,16 +45,16 @@ self.onmessage = (event) => {
         }
 
         if (startDate) {
-            params.append('startDate', startDate);
+          params.append('startDate', startDate);
         }
 
         if (endDate) {
-            params.append('endDate', endDate);
+          params.append('endDate', endDate);
         }
-        
-        const apiPath = `/v1/tickets/view?${params.toString()}`;
+
+        const apiPath = `/api/v1/tickets/view?${params.toString()}`;
         self.postMessage({ type: 'fetchData', payload: { apiPath } });
-        
+
       }, 200);
       break;
     }

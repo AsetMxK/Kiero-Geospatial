@@ -1,10 +1,13 @@
 import { Routes, Route, Link } from 'react-router-dom';
+import { Tooltip as GlobalTooltip } from 'react-tooltip';
+import 'react-tooltip/dist/react-tooltip.css';
 import MapPage from './pages/MapPage';
 import SharePage from './pages/SharePage';
 import IframeMapPage from './pages/IframeMapPage';
 import IframeMapPageClientAuth from './pages/IframeMapPageClientAuth';
 import IframeFullMapPage from './pages/IframeFullMapPage';
 import GlobalErrorHandler from './components/GlobalErrorHandler';
+import ErrorBoundary from './components/ErrorBoundary';
 
 /**
  * Komponen halaman 404 (Not Found) sederhana.
@@ -42,14 +45,32 @@ const App = () => {
     return (
         <>
             <GlobalErrorHandler />
-            <Routes>
-                <Route path="/" element={<MapPage />} />
-                <Route path="/share" element={<SharePage />} />
-                <Route path="/map-iframe" element={<IframeMapPage />} />
-                <Route path="/map-iframe-client" element={<IframeMapPageClientAuth />} />
-                <Route path="/map-iframe-full" element={<IframeFullMapPage />} />
-                <Route path="*" element={<NotFound />} />
-            </Routes>
+            <ErrorBoundary>
+                <Routes>
+                    <Route path="/" element={<MapPage />} />
+                    <Route path="/share" element={<SharePage />} />
+                    <Route path="/map-iframe" element={<IframeMapPage />} />
+                    <Route path="/map-iframe-client" element={<IframeMapPageClientAuth />} />
+                    <Route path="/map-iframe-full" element={<IframeFullMapPage />} />
+                    <Route path="*" element={<NotFound />} />
+                </Routes>
+            </ErrorBoundary>
+
+            {/* Global Tooltip Instance */}
+            <GlobalTooltip
+                id="main-tooltip"
+                className="!bg-gray-900/95 !backdrop-blur-sm !rounded-lg !text-xs !font-medium !px-2.5 !py-1.5 !z-[99999]"
+                style={{
+                    backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                    backdropFilter: 'blur(4px)',
+                    borderRadius: '0.5rem',
+                    fontSize: '0.75rem',
+                    fontWeight: '500',
+                    padding: '0.375rem 0.625rem',
+                    zIndex: 99999
+                }}
+                noArrow={false}
+            />
         </>
     );
 };

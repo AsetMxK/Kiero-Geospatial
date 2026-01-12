@@ -1,6 +1,6 @@
 import express from 'express';
 import prisma from '../config/prismaClient.js';
-import { isOriginAllowed } from '../utils/corsWhitelistCache.js';
+import { corsOptionsDelegate } from '../middleware/corsMiddleware.js';
 import * as jose from 'jose';
 import cors from 'cors';
 import { randomUUID } from 'crypto';
@@ -13,19 +13,6 @@ const INTERNAL_PORT = process.env.PORT || 4000;
 const INTERNAL_URL = `http://localhost:${INTERNAL_PORT}`;
 const TOKEN_ENDPOINT = `${INTERNAL_URL}/oauth/token`;
 const REFRESH_ENDPOINT = `${INTERNAL_URL}/oauth/refresh`;
-
-/**
- * Delegasi CORS dinamis yang memeriksa origin permintaan terhadap daftar putih.
- * @private
- */
-const corsOptionsDelegate = (req, callback) => {
-  const origin = req.header('Origin');
-  let corsOptions = { origin: isOriginAllowed(origin) };
-  if (!corsOptions.origin && origin) {
-    console.warn(`CORS: Origin '${origin}' denied.`);
-  }
-  callback(null, corsOptions);
-};
 
 router.use(cors(corsOptionsDelegate));
 
@@ -64,7 +51,7 @@ router.post('/proxy-token', async (req, res) => {
   if (!clientId && !receivedAssertion) {
     return res.status(400).json({ error: 'invalid_request', error_description: 'Request must include either clientId or assertion.' });
   }
-  
+
   let finalAssertion = receivedAssertion;
 
   try {
@@ -74,24 +61,24 @@ router.post('/proxy-token', async (req, res) => {
       if (!client) {
         return res.status(401).json({ error: 'invalid_client', error_description: 'Client not found.' });
       }
-      
+
       const allowedOrigins = client.allowedOrigins.split(',').map(o => o.trim());
       if (!allowedOrigins.includes(origin)) {
         return res.status(403).json({ error: 'access_denied', error_description: 'Origin not allowed for this client.' });
       }
       if (client.authMethod === 'client_credentials') {
-         finalAssertion = await createClientAssertion(client.clientId, client.privateKey);
+        finalAssertion = await createClientAssertion(client.clientId, client.privateKey);
       }
     } else if (receivedAssertion) {
       const claims = jose.decodeJwt(receivedAssertion);
       client = await prisma.client.findUnique({ where: { clientId: claims.iss } });
-       if (!client) {
+      if (!client) {
         return res.status(401).json({ error: 'invalid_client', error_description: 'Client from assertion not found.' });
       }
     }
 
     if (!finalAssertion) {
-        return res.status(400).json({ error: 'invalid_request', error_description: 'Could not obtain a valid assertion.' });
+      return res.status(400).json({ error: 'invalid_request', error_description: 'Could not obtain a valid assertion.' });
     }
 
     const tokenResponse = await fetch(TOKEN_ENDPOINT, {

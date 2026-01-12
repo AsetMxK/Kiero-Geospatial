@@ -24,7 +24,8 @@ dist-ssr
 *.sln
 *.sw?
 # app
-.env
+.env*
+!.env.example
 .next/
 *.pem
 archives

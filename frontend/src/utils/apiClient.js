@@ -2,11 +2,71 @@ import axios from 'axios';
 import { getAccessToken, getRefreshToken, storeTokens, clearTokens } from './tokenService';
 
 const GATEWAY_URL = import.meta.env.VITE_GATEWAY_URL || 'http://localhost:4000';
-const API_BASE_URL = `${GATEWAY_URL}/api`;
+const API_BASE_URL = GATEWAY_URL;
 const REFRESH_TOKEN_ENDPOINT = `${GATEWAY_URL}/auth-proxy/proxy-refresh`;
 
 let isRefreshing = false;
 let failedQueue = [];
+
+// ============================================================================
+// BroadcastChannel untuk sinkronisasi token antar tabs
+// ============================================================================
+const AUTH_CHANNEL_NAME = 'auth_channel';
+let authChannel = null;
+
+/**
+ * Inisialisasi BroadcastChannel untuk sinkronisasi token antar tabs browser.
+ * Jika satu tab berhasil refresh token, tab lain akan menerima notifikasi.
+ */
+const initAuthChannel = () => {
+  if (typeof BroadcastChannel === 'undefined') {
+    console.warn('BroadcastChannel not supported in this browser');
+    return;
+  }
+
+  authChannel = new BroadcastChannel(AUTH_CHANNEL_NAME);
+
+  authChannel.onmessage = (event) => {
+    const { type, access_token, refresh_token } = event.data;
+
+    if (type === 'TOKEN_REFRESHED' && access_token && refresh_token) {
+      // Tab lain berhasil refresh token, simpan tokens baru
+      storeTokens(access_token, refresh_token);
+    } else if (type === 'TOKENS_CLEARED') {
+      // Tab lain menghapus tokens (logout atau refresh gagal)
+      clearTokens();
+    }
+  };
+};
+
+// Inisialisasi channel saat module dimuat
+initAuthChannel();
+
+/**
+ * Broadcast token baru ke semua tabs lain.
+ * @param {string} accessToken - Access token baru
+ * @param {string} refreshToken - Refresh token baru
+ */
+const broadcastTokenRefresh = (accessToken, refreshToken) => {
+  if (authChannel) {
+    authChannel.postMessage({
+      type: 'TOKEN_REFRESHED',
+      access_token: accessToken,
+      refresh_token: refreshToken
+    });
+  }
+};
+
+/**
+ * Broadcast bahwa tokens telah dihapus ke semua tabs lain.
+ */
+const broadcastTokensClear = () => {
+  if (authChannel) {
+    authChannel.postMessage({ type: 'TOKENS_CLEARED' });
+  }
+};
+
+// ============================================================================
 
 /**
  * Memproses semua permintaan yang mengantri.
@@ -76,6 +136,9 @@ apiClient.interceptors.response.use(
         const { access_token, refresh_token } = response.data;
         storeTokens(access_token, refresh_token);
 
+        // Broadcast ke tabs lain bahwa token telah di-refresh
+        broadcastTokenRefresh(access_token, refresh_token);
+
         originalRequest.headers['Authorization'] = `Bearer ${access_token}`;
 
         processQueue(null, access_token);
@@ -85,6 +148,10 @@ apiClient.interceptors.response.use(
       } catch (refreshError) {
         console.error('Gagal me-refresh token:', refreshError);
         clearTokens();
+
+        // Broadcast ke tabs lain bahwa tokens telah dihapus
+        broadcastTokensClear();
+
         processQueue(refreshError, null);
 
         return Promise.reject(refreshError);

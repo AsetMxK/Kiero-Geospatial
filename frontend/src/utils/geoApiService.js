@@ -7,7 +7,7 @@ import { fetchAuthenticated } from './authService.js';
  * @throws {Error} Jika permintaan API gagal.
  */
 export async function getProvinces() {
-    const response = await fetchAuthenticated('/v1/geo/provinsi');
+    const response = await fetchAuthenticated('/api/v1/geo/provinsi');
     if (!response.ok) {
         throw new Error('Gagal mengambil data provinsi');
     }
@@ -23,7 +23,7 @@ export async function getProvinces() {
  * @throws {Error} Jika permintaan API gagal.
  */
 export async function getKabKota(provinceCode) {
-    const response = await fetchAuthenticated(`/v1/geo/kab-kota/${provinceCode}`);
+    const response = await fetchAuthenticated(`/api/v1/geo/kab-kota/${provinceCode}`);
     if (!response.ok) {
         throw new Error(`Gagal mengambil data kab/kota untuk provinsi ${provinceCode}`);
     }
@@ -40,7 +40,7 @@ export async function getKabKota(provinceCode) {
  * @throws {Error} Jika permintaan API gagal.
  */
 export async function getKecamatan(provinceCode, kabkotaCode) {
-    const response = await fetchAuthenticated(`/v1/geo/kecamatan/${provinceCode}/${kabkotaCode}`);
+    const response = await fetchAuthenticated(`/api/v1/geo/kecamatan/${provinceCode}/${kabkotaCode}`);
     if (!response.ok) {
         throw new Error(`Gagal mengambil data kecamatan untuk kab/kota ${kabkotaCode}`);
     }
@@ -58,7 +58,7 @@ export async function getKecamatan(provinceCode, kabkotaCode) {
  * @throws {Error} Jika permintaan API gagal.
  */
 export async function getDesa(provinceCode, kabkotaCode, kecamatanCode) {
-    const response = await fetchAuthenticated(`/v1/geo/desa/${provinceCode}/${kabkotaCode}/${kecamatanCode}`);
+    const response = await fetchAuthenticated(`/api/v1/geo/desa/${provinceCode}/${kabkotaCode}/${kecamatanCode}`);
     if (!response.ok) {
         throw new Error(`Gagal mengambil data desa untuk kecamatan ${kecamatanCode}`);
     }
@@ -86,7 +86,9 @@ export const searchRegionByName = async ({ level, name, provinceCode, kabkotaCod
     if (kecamatanCode) query.append('kecamatanCode', kecamatanCode);
     if (includeGeometry !== undefined) query.append('includeGeometry', includeGeometry);
 
-    const response = await fetchAuthenticated(`/v1/geo/search?${query.toString()}`);
+    if (includeGeometry !== undefined) query.append('includeGeometry', includeGeometry);
+
+    const response = await fetchAuthenticated(`/api/v1/geo/search?${query.toString()}`);
     if (!response.ok) {
         throw new Error('Gagal mencari data wilayah');
     }
@@ -106,7 +108,7 @@ export const searchRegionByName = async ({ level, name, provinceCode, kabkotaCod
  */
 export const findRegionByPoint = async (lat, lng, includeGeometry = false) => {
     try {
-        const response = await fetchAuthenticated('/v1/geo/find-by-point', {
+        const response = await fetchAuthenticated('/api/v1/geo/find-by-point', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -134,7 +136,7 @@ export const findRegionByPoint = async (lat, lng, includeGeometry = false) => {
  * @returns {Promise<Array<object>>} Promise yang me-resolve ke array hasil pencarian.
  */
 export const searchRegions = async (query) => {
-    const response = await fetchAuthenticated(`/v1/geo/search?name=${encodeURIComponent(query)}&includeGeometry=false`);
+    const response = await fetchAuthenticated(`/api/v1/geo/search?name=${encodeURIComponent(query)}&includeGeometry=false`);
     if (!response.ok) {
         throw new Error('Gagal melakukan pencarian wilayah');
     }

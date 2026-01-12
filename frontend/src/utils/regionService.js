@@ -18,7 +18,7 @@ export const getRegionStats = async (regionCode, startDate, endDate) => {
   if (endDate) params.append('endDate', endDate);
 
   const queryString = params.toString();
-  const url = `/v1/regions/${regionCode}/stats${queryString ? `?${queryString}` : ''}`;
+  const url = `/api/v1/regions/${regionCode}/stats${queryString ? `?${queryString}` : ''}`;
 
   const response = await fetchAuthenticated(url);
   if (!response.ok) {
@@ -53,7 +53,7 @@ export const getRegionStatsDetails = async (regionCode, startDate, endDate, stat
   if (endDate) params.append('endDate', endDate);
 
   const queryString = params.toString();
-  const url = `/v1/regions/${regionCode}/stats/details${queryString ? `?${queryString}` : ''}`;
+  const url = `/api/v1/regions/${regionCode}/stats/details${queryString ? `?${queryString}` : ''}`;
 
   const response = await fetchAuthenticated(url);
   if (!response.ok) {

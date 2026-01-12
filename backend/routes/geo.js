@@ -315,110 +315,131 @@ router.post('/find-by-point', async (req, res) => {
   try {
     const { lat, lng, includeGeometry } = req.body;
 
-    if (!lat || !lng) {
-      return res.status(400).json({ message: 'Latitude and Longitude are required' });
+    // Strict numeric validation to prevent injection
+    const parsedLat = parseFloat(lat);
+    const parsedLng = parseFloat(lng);
+
+    if (isNaN(parsedLat) || isNaN(parsedLng)) {
+      return res.status(400).json({ message: 'Latitude and Longitude must be valid numbers' });
     }
 
-    const pointWKT = `POINT(${lng} ${lat})`;
+    // Validate coordinate ranges
+    if (parsedLat < -90 || parsedLat > 90 || parsedLng < -180 || parsedLng > 180) {
+      return res.status(400).json({ message: 'Coordinates out of valid range' });
+    }
 
-    // 1. Try to find Desa (most specific)
+    const pointWKT = `POINT(${parsedLng} ${parsedLat})`;
+
+    // Optimized single query with JOINs to fetch all hierarchy at once
+    // This replaces 4 separate queries (N+1 problem)
+    const geomSelect = includeGeometry ? Prisma.sql`ST_AsGeoJSON(d.geom) as geom_geojson,` : Prisma.sql``;
+
     const foundDesa = await prisma.$queryRaw`
-        SELECT id, level, tipe_adm, nama, kode_prov, kode_kab, kode_kec,
-    ${includeGeometry ? Prisma.sql`ST_AsGeoJSON(geom) as geom_geojson,` : Prisma.sql``}
-  luas
-        FROM regions 
-        WHERE level = 'desa' 
-          AND ST_Contains(geom, ST_GeomFromText(${pointWKT}, 4326))
-        LIMIT 1
+      SELECT 
+        d.id, d.level, d.tipe_adm, d.nama, d.kode_prov, d.kode_kab, d.kode_kec, d.luas,
+        ${geomSelect}
+        p.nama as prov_nama, p.kode_prov as prov_kode,
+        k.nama as kab_nama, k.kode_kab as kab_kode, k.tipe_adm as kab_tipe,
+        c.nama as kec_nama, c.kode_kec as kec_kode
+      FROM regions d
+      LEFT JOIN regions p ON d.kode_prov = p.kode_prov AND p.level = 'provinsi'
+      LEFT JOIN regions k ON d.kode_prov = k.kode_prov AND d.kode_kab = k.kode_kab AND k.level = 'kab_kota'
+      LEFT JOIN regions c ON d.kode_prov = c.kode_prov AND d.kode_kab = c.kode_kab AND d.kode_kec = c.kode_kec AND c.level = 'kecamatan'
+      WHERE d.level = 'desa' 
+        AND ST_Contains(d.geom, ST_GeomFromText(${pointWKT}, 4326))
+      LIMIT 1
     `;
 
     if (foundDesa.length > 0) {
-      const desa = foundDesa[0];
-      const kec = await prisma.regions.findFirst({ where: { level: 'kecamatan', kode_prov: desa.kode_prov, kode_kab: desa.kode_kab, kode_kec: desa.kode_kec } });
-      const kab = await prisma.regions.findFirst({ where: { level: 'kab_kota', kode_prov: desa.kode_prov, kode_kab: desa.kode_kab } });
-      const prov = await prisma.regions.findFirst({ where: { level: 'provinsi', kode_prov: desa.kode_prov } });
-
+      const row = foundDesa[0];
       return res.json({
         data: {
-          provinsi: { nama: prov?.nama, kode: prov?.kode_prov },
-          kab_kota: { nama: kab?.nama, kode: kab?.kode_kab, tipe: kab?.tipe_adm },
-          kecamatan: { nama: kec?.nama, kode: kec?.kode_kec },
-          desa: { nama: desa.nama, kode: null },
-          kode_prov: prov?.kode_prov,
-          kode_kab: kab?.kode_kab,
-          kode_kec: kec?.kode_kec,
-          geom_geojson: desa.geom_geojson ? JSON.parse(desa.geom_geojson) : null
+          provinsi: { nama: row.prov_nama, kode: row.prov_kode },
+          kab_kota: { nama: row.kab_nama, kode: row.kab_kode, tipe: row.kab_tipe },
+          kecamatan: { nama: row.kec_nama, kode: row.kec_kode },
+          desa: { nama: row.nama, kode: null },
+          kode_prov: row.prov_kode,
+          kode_kab: row.kab_kode,
+          kode_kec: row.kec_kode,
+          geom_geojson: row.geom_geojson ? JSON.parse(row.geom_geojson) : null
         }
       });
     }
 
-    // 2. Try Kecamatan
+    // 2. Try Kecamatan with JOINs
+    const geomSelectKec = includeGeometry ? Prisma.sql`ST_AsGeoJSON(c.geom) as geom_geojson,` : Prisma.sql``;
+
     const foundKecamatan = await prisma.$queryRaw`
-        SELECT id, level, tipe_adm, nama, kode_prov, kode_kab, kode_kec,
-    ${includeGeometry ? Prisma.sql`ST_AsGeoJSON(geom) as geom_geojson,` : Prisma.sql``}
-  luas
-        FROM regions 
-        WHERE level = 'kecamatan' 
-          AND ST_Contains(geom, ST_GeomFromText(${pointWKT}, 4326))
-        LIMIT 1
+      SELECT 
+        c.id, c.level, c.tipe_adm, c.nama, c.kode_prov, c.kode_kab, c.kode_kec, c.luas,
+        ${geomSelectKec}
+        p.nama as prov_nama, p.kode_prov as prov_kode,
+        k.nama as kab_nama, k.kode_kab as kab_kode, k.tipe_adm as kab_tipe
+      FROM regions c
+      LEFT JOIN regions p ON c.kode_prov = p.kode_prov AND p.level = 'provinsi'
+      LEFT JOIN regions k ON c.kode_prov = k.kode_prov AND c.kode_kab = k.kode_kab AND k.level = 'kab_kota'
+      WHERE c.level = 'kecamatan' 
+        AND ST_Contains(c.geom, ST_GeomFromText(${pointWKT}, 4326))
+      LIMIT 1
     `;
 
     if (foundKecamatan.length > 0) {
-      const kec = foundKecamatan[0];
-      const kab = await prisma.regions.findFirst({ where: { level: 'kab_kota', kode_prov: kec.kode_prov, kode_kab: kec.kode_kab } });
-      const prov = await prisma.regions.findFirst({ where: { level: 'provinsi', kode_prov: kec.kode_prov } });
-
+      const row = foundKecamatan[0];
       return res.json({
         data: {
-          provinsi: { nama: prov?.nama, kode: prov?.kode_prov },
-          kab_kota: { nama: kab?.nama, kode: kab?.kode_kab, tipe: kab?.tipe_adm },
-          kecamatan: { nama: kec.nama, kode: kec.kode_kec },
+          provinsi: { nama: row.prov_nama, kode: row.prov_kode },
+          kab_kota: { nama: row.kab_nama, kode: row.kab_kode, tipe: row.kab_tipe },
+          kecamatan: { nama: row.nama, kode: row.kode_kec },
           desa: null,
-          kode_prov: prov?.kode_prov,
-          kode_kab: kab?.kode_kab,
-          kode_kec: kec.kode_kec,
-          geom_geojson: kec.geom_geojson ? JSON.parse(kec.geom_geojson) : null
+          kode_prov: row.prov_kode,
+          kode_kab: row.kab_kode,
+          kode_kec: row.kode_kec,
+          geom_geojson: row.geom_geojson ? JSON.parse(row.geom_geojson) : null
         }
       });
     }
 
-    // 3. Try Kab/Kota
+    // 3. Try Kab/Kota with JOIN
+    const geomSelectKab = includeGeometry ? Prisma.sql`ST_AsGeoJSON(k.geom) as geom_geojson,` : Prisma.sql``;
+
     const foundKabKota = await prisma.$queryRaw`
-        SELECT id, level, tipe_adm, nama, kode_prov, kode_kab,
-    ${includeGeometry ? Prisma.sql`ST_AsGeoJSON(geom) as geom_geojson,` : Prisma.sql``}
-  luas
-        FROM regions 
-        WHERE level = 'kab_kota' 
-          AND ST_Contains(geom, ST_GeomFromText(${pointWKT}, 4326))
-        LIMIT 1
+      SELECT 
+        k.id, k.level, k.tipe_adm, k.nama, k.kode_prov, k.kode_kab, k.luas,
+        ${geomSelectKab}
+        p.nama as prov_nama, p.kode_prov as prov_kode
+      FROM regions k
+      LEFT JOIN regions p ON k.kode_prov = p.kode_prov AND p.level = 'provinsi'
+      WHERE k.level = 'kab_kota' 
+        AND ST_Contains(k.geom, ST_GeomFromText(${pointWKT}, 4326))
+      LIMIT 1
     `;
 
     if (foundKabKota.length > 0) {
-      const kab = foundKabKota[0];
-      const prov = await prisma.regions.findFirst({ where: { level: 'provinsi', kode_prov: kab.kode_prov } });
-
+      const row = foundKabKota[0];
       return res.json({
         data: {
-          provinsi: { nama: prov?.nama, kode: prov?.kode_prov },
-          kab_kota: { nama: kab.nama, kode: kab.kode_kab, tipe: kab.tipe_adm },
+          provinsi: { nama: row.prov_nama, kode: row.prov_kode },
+          kab_kota: { nama: row.nama, kode: row.kode_kab, tipe: row.tipe_adm },
           kecamatan: null,
           desa: null,
-          kode_prov: prov?.kode_prov,
-          kode_kab: kab.kode_kab,
-          geom_geojson: kab.geom_geojson ? JSON.parse(kab.geom_geojson) : null
+          kode_prov: row.prov_kode,
+          kode_kab: row.kode_kab,
+          geom_geojson: row.geom_geojson ? JSON.parse(row.geom_geojson) : null
         }
       });
     }
 
-    // 4. Try Provinsi
+    // 4. Try Provinsi (no JOIN needed)
+    const geomSelectProv = includeGeometry ? Prisma.sql`ST_AsGeoJSON(geom) as geom_geojson,` : Prisma.sql``;
+
     const foundProvinsi = await prisma.$queryRaw`
-        SELECT id, level, tipe_adm, nama, kode_prov,
-    ${includeGeometry ? Prisma.sql`ST_AsGeoJSON(geom) as geom_geojson,` : Prisma.sql``}
-  luas
-        FROM regions 
-        WHERE level = 'provinsi' 
-          AND ST_Contains(geom, ST_GeomFromText(${pointWKT}, 4326))
-        LIMIT 1
+      SELECT id, level, tipe_adm, nama, kode_prov,
+        ${geomSelectProv}
+        luas
+      FROM regions 
+      WHERE level = 'provinsi' 
+        AND ST_Contains(geom, ST_GeomFromText(${pointWKT}, 4326))
+      LIMIT 1
     `;
 
     if (foundProvinsi.length > 0) {

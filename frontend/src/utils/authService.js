@@ -77,7 +77,7 @@ export async function authenticateWithAssertion(assertion) {
  *
  * @export
  * @async
- * @param {string} endpoint - Path API (misalnya, '/v1/geo/provinsi').
+ * @param {string} endpoint - Path API (misalnya, /'api/v1/geo/provinsi').
  * @param {object} [options={}] - Opsi yang kompatibel dengan fetch (method, body, dll.).
  * @returns {Promise<Response>} Promise yang me-resolve dengan objek yang mirip `Response` dari `fetch`.
  */

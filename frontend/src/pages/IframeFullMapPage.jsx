@@ -623,7 +623,9 @@ const IframeFullMapPage = () => {
     }, []);
 
     useEffect(() => {
-        const checkDevice = () => { setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0); };
+        const checkDevice = () => {
+            setIsTouchDevice(window.matchMedia("(pointer: coarse)").matches);
+        };
         checkDevice();
         window.addEventListener('resize', checkDevice);
         return () => window.removeEventListener('resize', checkDevice);
@@ -1081,10 +1083,15 @@ const IframeFullMapPage = () => {
                             ) : (
                                 // Desktop Layout (Original)
                                 <>
-                                    <div className="absolute top-4 pointer-events-auto z-30 transition-all duration-300 ease-in-out" style={{ left: `calc(${ACTION_SIDEBAR_WIDTH}px + 1rem)`, width: `calc(${REGION_INFO_SIDEBAR_WIDTH}px - 2rem)` }}>
+                                    <div className="absolute top-4 pointer-events-auto z-30 transition-all duration-300 ease-in-out" style={{
+                                        left: `calc(${ACTION_SIDEBAR_WIDTH}px + ${activeSidebar === 'geoAi' && !isSidebarHidden ? `${REGION_INFO_SIDEBAR_WIDTH}px + ` : ''}1rem)`,
+                                        width: `calc(${REGION_INFO_SIDEBAR_WIDTH}px - 2rem)`
+                                    }}>
                                         <SearchBar onPlaceSelect={handlePlaceSelect} />
                                     </div>
-                                    <div className="absolute top-4 pointer-events-auto z-30" style={{ left: `calc(${ACTION_SIDEBAR_WIDTH}px + ${REGION_INFO_SIDEBAR_WIDTH}px + 2rem)` }}>
+                                    <div className="absolute top-4 pointer-events-auto z-30 transition-all duration-300 ease-in-out" style={{
+                                        left: `calc(${ACTION_SIDEBAR_WIDTH}px + ${REGION_INFO_SIDEBAR_WIDTH}px + ${activeSidebar === 'geoAi' && !isSidebarHidden ? `${REGION_INFO_SIDEBAR_WIDTH}px + ` : ''}2rem)`
+                                    }}>
                                         <FilterPills
                                             selectedCategory={categorySelection}
                                             onCategoryChange={setCategorySelection}

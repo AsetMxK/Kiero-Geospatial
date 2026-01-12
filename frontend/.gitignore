@@ -26,6 +26,7 @@ dist-ssr
 batas-administrasi.zip
 batas-administrasi/
 # app
-.env
+.env*
+!.env.example
 .next/
 *.pem

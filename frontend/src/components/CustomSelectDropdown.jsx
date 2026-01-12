@@ -146,7 +146,7 @@ const CustomSelectDropdown = ({ label, placeholder, disabled = false, options = 
         <div ref={wrapperRef} className="w-full">
             {label && <label className="block text-xs font-semibold text-gray-700 mb-1.5 ml-0.5">{label}</label>}
             <div className="relative">
-                <Tooltip content={selectedName} enabled={!!selectedOption && !isOpen}>
+                <Tooltip content={selectedName} enabled={!!selectedOption && !isOpen} className="w-full block">
                     <button
                         type="button"
                         onClick={() => !disabled && setIsOpen(!isOpen)}
@@ -162,8 +162,8 @@ const CustomSelectDropdown = ({ label, placeholder, disabled = false, options = 
                             ${className}
                         `}
                     >
-                        <span className="[grid-area:1/1] pr-6 flex items-center">
-                            <span className={`truncate ${disabled ? 'text-gray-400' : value ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
+                        <span className="[grid-area:1/1] pr-6 flex items-center min-w-0">
+                            <span className={`truncate w-full text-left ${disabled ? 'text-gray-400' : value ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
                                 {selectedName}
                             </span>
                         </span>

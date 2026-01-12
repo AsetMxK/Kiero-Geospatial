@@ -1,9 +1,11 @@
 import dotenv from 'dotenv';
 import express from 'express';
 import authRouter, { loadGatewayPrivateKey } from './routes/auth.js';
-import gatewayRouter, { loadGatewayPublicKey } from './routes/gateway.js';
+import gatewayRouter from './routes/gateway.js';
 import proxyRouter from './routes/proxy.js';
+import aiRouter from './routes/ai.js';
 import loggingMiddleware from './middleware/logging.js';
+import { loadGatewayPublicKey } from './middleware/authMiddleware.js';
 import { startArchiveScheduler } from './services/archiveService.js';
 
 /**
@@ -61,6 +63,10 @@ const startServer = async () => {
   // Rute Aman Baru: Proksi untuk Frontend Mendapatkan Token
   // URL: http://localhost:4000/auth-proxy/proxy-token
   app.use('/auth-proxy', proxyRouter);
+
+  // Rute AI: Proksi ke AI Service
+  // URL: http://localhost:4000/ai/ask
+  app.use('/ai', aiRouter);
 
   // Rute Terproteksi: Proksi ke Resource Server Internal
   // URL: http://localhost:4000/api/*

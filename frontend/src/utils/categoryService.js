@@ -9,7 +9,7 @@ import { fetchAuthenticated } from './authService.js';
  * @throws {Error} Jika permintaan API gagal.
  */
 export async function getCategories() {
-    const response = await fetchAuthenticated('/v1/categories');
+    const response = await fetchAuthenticated('/api/v1/categories');
     if (!response.ok) {
         throw new Error('Gagal mengambil data kategori');
     }

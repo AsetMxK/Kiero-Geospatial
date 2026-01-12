@@ -1,7 +1,7 @@
 import { fetchAuthenticated } from './authService';
 
 /**
- * Mengambil data peta (kluster tiket atau titik individual) dari endpoint API `/v1/tickets/view`.
+ * Mengambil data peta (kluster tiket atau titik individual) dari endpoint API `/api/v1/tickets/view`.
  * Fungsi ini dimaksudkan untuk dipanggil dari main thread atas nama web worker,
  * yang bertanggung jawab untuk membangun path API yang benar.
  * @async
@@ -33,7 +33,7 @@ export const getTicketDetails = async (ticketId) => {
         return null;
     }
 
-    const response = await fetchAuthenticated(`/v1/tickets/${ticketId}`);
+    const response = await fetchAuthenticated(`/api/v1/tickets/${ticketId}`);
     if (!response.ok) {
         throw new Error(`Gagal mengambil detail tiket: ${response.status}`);
     }

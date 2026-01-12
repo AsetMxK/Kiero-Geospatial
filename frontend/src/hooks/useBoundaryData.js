@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { getProvinces, getKabKota, getKecamatan, getDesa } from '../utils/geoApiService';
 
 const EMPTY_ARRAY = [];
@@ -24,10 +25,14 @@ export const useBoundaryData = ({
 }) => {
   // Membuat queryKey yang unik untuk setiap permintaan data.
   // React Query menggunakan kunci ini untuk caching.
-  const queryKey = ['boundary', level, provinceCode, kabkotaCode, kecamatanCode];
+  const queryKey = useMemo(() =>
+    ['boundary', level, provinceCode, kabkotaCode, kecamatanCode],
+    [level, provinceCode, kabkotaCode, kecamatanCode]
+  );
 
   // Menentukan fungsi fetcher mana yang akan dipanggil berdasarkan level.
-  const getQueryFn = () => {
+  // Memoized untuk mencegah recreate setiap render
+  const queryFn = useMemo(() => {
     switch (level) {
       case 'provinsi':
         return getProvinces;
@@ -42,34 +47,32 @@ export const useBoundaryData = ({
         // Kembalikan fungsi yang mengembalikan null jika level tidak valid.
         return () => null;
     }
-  };
+  }, [level, provinceCode, kabkotaCode, kecamatanCode]);
 
-  const queryFn = getQueryFn();
-  
   // Menentukan apakah query harus dijalankan.
-  // Misalnya, untuk 'kabkota', kita memerlukan 'provinceCode'.
-  const enabled = () => {
+  // Memoized untuk mencegah recalculation setiap render
+  const enabled = useMemo(() => {
     switch (level) {
-        case 'provinsi':
-            return true;
-        case 'kabkota':
-            return !!provinceCode;
-        case 'kecamatan':
-            return !!provinceCode && !!kabkotaCode;
-        case 'desa':
-            return !!provinceCode && !!kabkotaCode && !!kecamatanCode;
-        default:
-            return false;
+      case 'provinsi':
+        return true;
+      case 'kabkota':
+        return !!provinceCode;
+      case 'kecamatan':
+        return !!provinceCode && !!kabkotaCode;
+      case 'desa':
+        return !!provinceCode && !!kabkotaCode && !!kecamatanCode;
+      default:
+        return false;
     }
-  };
+  }, [level, provinceCode, kabkotaCode, kecamatanCode]);
 
   const queryResult = useQuery({
     queryKey,
     queryFn,
     staleTime: Infinity,
     cacheTime: 1000 * 60 * 60, // 60 menit
-    enabled: enabled(),
-    refetchOnWindowFocus: false, 
+    enabled,
+    refetchOnWindowFocus: false,
     retry: (failureCount, error) => {
       if (error.message.includes('404')) return false;
       return failureCount < 3;
