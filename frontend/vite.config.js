@@ -16,7 +16,7 @@ export default defineConfig(({ mode }) => {
                 output: {
                     manualChunks: {
                         vendor: ['react', 'react-dom', 'react-router-dom'],
-                        ui: ['@vis.gl/react-google-maps', '@floating-ui/react', '@tippyjs/react', 'tippy.js'],
+                        ui: ['@vis.gl/react-google-maps', '@floating-ui/react'],
                         utils: ['axios', 'date-fns', 'screenfull']
                     }
                 }
