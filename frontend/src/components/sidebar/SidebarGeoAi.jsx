@@ -161,30 +161,49 @@ const SidebarGeoAi = ({ isMobile }) => {
                             </div>
                         </div>
                     ) : (
-                        aiMessages.map((msg, idx) => (
-                            <div
-                                key={idx}
-                                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                            >
+                        aiMessages.map((msg, idx) => {
+                            // 1. Cek Status Error (Support struktur nested 'answer' maupun root)
+                            const isErrorState =
+                                msg.status === 'error' ||
+                                msg?.answer?.status === 'error' ||
+                                msg.isError;
+
+                            // 2. Tentukan Pesan yang Ditampilkan
+                            // PENTING: Jika error, kita PAKSA ambil pesan errornya, abaikan msg.content lama.
+                            let displayContent = msg.content;
+
+                            if (isErrorState) {
+                                displayContent = msg?.answer?.message || msg.message || "Terjadi kesalahan pada data.";
+                            }
+
+                            return (
                                 <div
-                                    className={`max-w-[95%] rounded-2xl px-4 py-3 ${msg.role === 'user'
-                                        ? 'bg-blue-600 text-white rounded-br-md'
-                                        : msg.isError
-                                            ? 'bg-red-50 text-red-700 border border-red-200 rounded-bl-md'
-                                            : 'bg-white text-gray-800 border border-gray-200 shadow-sm rounded-bl-md'
-                                        }`}
+                                    key={idx}
+                                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                                 >
-                                    {msg.tableData && msg.tableData.length > 0 ? (
-                                        <AiResponseTable
-                                            analysis_summary={msg.content}
-                                            data={msg.tableData}
-                                        />
-                                    ) : (
-                                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                                    )}
+                                    <div
+                                        className={`max-w-[95%] rounded-2xl px-4 py-3 ${msg.role === 'user'
+                                                ? 'bg-blue-600 text-white rounded-br-md'
+                                                : isErrorState
+                                                    ? 'bg-red-50 text-red-700 border border-red-200 rounded-bl-md' // Style Merah jika Error
+                                                    : 'bg-white text-gray-800 border border-gray-200 shadow-sm rounded-bl-md'
+                                            }`}
+                                    >
+                                        {/* 3. Logic Render Konten */}
+                                        {/* Tampilkan Tabel HANYA jika BUKAN error dan ada data */}
+                                        {!isErrorState && msg.tableData && msg.tableData.length > 0 ? (
+                                            <AiResponseTable
+                                                analysis_summary={displayContent}
+                                                data={msg.tableData}
+                                            />
+                                        ) : (
+                                            // Jika Error atau tidak ada tabel, tampilkan text (yang sudah difilter di atas)
+                                            <p className="text-sm whitespace-pre-wrap">{displayContent}</p>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        ))
+                            );
+                        })
                     )}
                     {isAiLoading && (
                         <div className="flex justify-start">

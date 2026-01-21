@@ -17,9 +17,9 @@ router.use(tokenValidationMiddleware);
  */
 
 router.use('/', proxy(process.env.AI_SERVICE_URL, {
-    timeout: 30000,
+    timeout: 300000,
     proxyReqOptDecorator: (proxyReqOpts) => {
-        proxyReqOpts.timeout = 30000;
+        proxyReqOpts.timeout = 300000;
         return proxyReqOpts;
     },
     proxyErrorHandler: (err, res, next) => {

@@ -46,6 +46,8 @@ export const useGeoAi = () => {
                 role: 'assistant',
                 content: data.answer?.analysis_summary || "Berikut hasil analisis data yang ditemukan.",
                 tableData: data.answer?.data || [],
+                status: data.answer?.status,
+                message: data.answer?.message
             };
             addMessage(aiResponse);
         },
