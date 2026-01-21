@@ -14,6 +14,7 @@ services:
       # URL Identifiers
       - GATEWAY_URL=${GATEWAY_URL:-http://localhost:4000}
       - RESOURCE_SERVER_URL=${RESOURCE_SERVER_URL:-http://backend:3000}
+      - AI_SERVICE_URL=${AI_SERVICE_URL}
       # Keys
       - GATEWAY_PRIVATE_KEY_PATH=/app/keys/gateway_private.pem
       - GATEWAY_PUBLIC_KEY_PATH=/app/keys/gateway_public.pem
