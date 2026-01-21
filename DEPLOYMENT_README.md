@@ -138,9 +138,9 @@ if (Test-Path "temp_upload") { Remove-Item "temp_upload" -Recurse -Force }
 New-Item -ItemType Directory -Path "temp_upload"
 
 # 1. Copy Folders (cleanly excluding dependencies)
-robocopy backend temp_upload\backend /E /XD node_modules logs archives /XF .env*
-robocopy frontend temp_upload\frontend /E /XD node_modules dist /XF .env*
-robocopy geo-gateway temp_upload\geo-gateway /E /XD node_modules logs archives /XF .env*
+robocopy backend temp_upload\backend /E /XD node_modules logs archives /XF .env* package-lock.json
+robocopy frontend temp_upload\frontend /E /XD node_modules dist /XF .env* package-lock.json
+robocopy geo-gateway temp_upload\geo-gateway /E /XD node_modules logs archives /XF .env* package-lock.json
 robocopy keys temp_upload\keys /E
 
 # 2. Copy Files
