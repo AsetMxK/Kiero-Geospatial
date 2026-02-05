@@ -179,3 +179,44 @@ body {
 .rdrDateRangePickerWrapper .rdrInputRange input {
   font-size: 10.5px;
 }
+
+/* END: DateRangePicker Custom Scaling */
+
+/* START: AI Markdown Content Styles */
+.ai-markdown-content {
+  line-height: 1.6;
+}
+
+.ai-markdown-content h2,
+.ai-markdown-content h3,
+.ai-markdown-content h4 {
+  margin-top: 0;
+}
+
+.ai-markdown-content h2:first-child,
+.ai-markdown-content h3:first-child,
+.ai-markdown-content h4:first-child,
+.ai-markdown-content>div:first-child {
+  margin-top: 0;
+}
+
+.ai-markdown-content p {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.ai-markdown-content ul {
+  padding-left: 0;
+  list-style: none;
+}
+
+.ai-markdown-content table {
+  border-collapse: collapse;
+}
+
+.ai-markdown-content hr {
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+/* END: AI Markdown Content Styles */

@@ -44,7 +44,7 @@ export const useGeoAi = () => {
             // Format response untuk disimpan di state
             const aiResponse = {
                 role: 'assistant',
-                content: data.answer?.analysis_summary || "Berikut hasil analisis data yang ditemukan.",
+                content: data.answer?.analysis_summary || data.answer ||"Berikut hasil analisis data yang ditemukan.",
                 tableData: data.answer?.data || [],
                 status: data.answer?.status,
                 message: data.answer?.message

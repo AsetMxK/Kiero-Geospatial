@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import AiResponseTable from '../AiResponseTable';
+import AiMarkdownRenderer from '../AiMarkdownRenderer';
 import { useGeoAi } from '../../hooks/useGeoAi';
 import TrashIcon from '../icons/TrashIcon';
 import Tooltip from '../Tooltip';
@@ -183,10 +184,10 @@ const SidebarGeoAi = ({ isMobile }) => {
                                 >
                                     <div
                                         className={`max-w-[95%] rounded-2xl px-4 py-3 ${msg.role === 'user'
-                                                ? 'bg-blue-600 text-white rounded-br-md'
-                                                : isErrorState
-                                                    ? 'bg-red-50 text-red-700 border border-red-200 rounded-bl-md' // Style Merah jika Error
-                                                    : 'bg-white text-gray-800 border border-gray-200 shadow-sm rounded-bl-md'
+                                            ? 'bg-blue-600 text-white rounded-br-md'
+                                            : isErrorState
+                                                ? 'bg-red-50 text-red-700 border border-red-200 rounded-bl-md' // Style Merah jika Error
+                                                : 'bg-white text-gray-800 border border-gray-200 shadow-sm rounded-bl-md'
                                             }`}
                                     >
                                         {/* 3. Logic Render Konten */}
@@ -197,8 +198,15 @@ const SidebarGeoAi = ({ isMobile }) => {
                                                 data={msg.tableData}
                                             />
                                         ) : (
-                                            // Jika Error atau tidak ada tabel, tampilkan text (yang sudah difilter di atas)
-                                            <p className="text-sm whitespace-pre-wrap">{displayContent}</p>
+                                            // Jika Error atau tidak ada tabel, render dengan markdown renderer
+                                            msg.role === 'user' ? (
+                                                <p className="text-sm whitespace-pre-wrap">{displayContent}</p>
+                                            ) : (
+                                                <AiMarkdownRenderer
+                                                    content={displayContent}
+                                                    className="text-sm"
+                                                />
+                                            )
                                         )}
                                     </div>
                                 </div>
@@ -226,7 +234,7 @@ const SidebarGeoAi = ({ isMobile }) => {
             {/* Input Area */}
             <div className="flex-shrink-0 border-t border-gray-200 bg-white p-4">
                 <form onSubmit={handleAiSubmit} className="max-w-lg mx-auto">
-                    <div className="flex items-center gap-2 bg-gray-100 rounded-full p-1.5 pl-4 border border-gray-200 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent transition-all">
+                    <div className="flex items-center gap-2 bg-gray-100 rounded-2xl p-1.5 pl-4 border border-gray-200 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent transition-all">
                         <textarea
                             value={aiInput}
                             onChange={(e) => {

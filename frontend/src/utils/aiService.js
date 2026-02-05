@@ -1,4 +1,5 @@
 import { fetchAuthenticated } from './authService';
+import { getAccessToken } from './tokenService';
 
 /**
  * Mengirim pertanyaan ke Geo AI service.
@@ -150,12 +151,16 @@ export async function askGeoAi(question) {
     // --- MOCK DATA LOGIC END ---
 
     // Fetch real data (no automatic fallback)
+    const token = getAccessToken();
     const response = await fetchAuthenticated('/ai/ask', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: { question },
+        body: { 
+            question, 
+            session_id: token 
+        },
     });
 
     if (!response.ok) {
