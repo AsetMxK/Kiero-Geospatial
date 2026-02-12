@@ -42,6 +42,7 @@ const UnifiedSidebar = ({
     onGoToPin,
     onDeletePin,
     isMobile,
+    onRegionAutoSelect,
 }) => {
     const [activeAdminTab, setActiveAdminTab] = useState('admin');
     const [activeRegionInfoTab, setActiveRegionInfoTab] = useState('stats');
@@ -149,7 +150,7 @@ const UnifiedSidebar = ({
                     />
                 );
             case 'geoAi':
-                return <SidebarGeoAi isMobile={isMobile} />;
+                return <SidebarGeoAi isMobile={isMobile} onRegionAutoSelect={onRegionAutoSelect} />;
             default:
                 return null;
         }

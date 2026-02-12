@@ -64,7 +64,7 @@ const useGeoAiStore = create(
                     });
                 }
 
-                if (!sessions[currentSessionId]) return;
+                if (!sessions[currentSessionId]) return currentSessionId;
 
                 const session = sessions[currentSessionId];
                 const newMessages = [...session.messages, message];
@@ -86,6 +86,8 @@ const useGeoAiStore = create(
                         },
                     },
                 }));
+
+                return currentSessionId;
             },
 
             /**

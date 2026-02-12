@@ -9,7 +9,7 @@ import useGeoAiStore from '../stores/useGeoAiStore';
  * 
  * @returns {object} Hook state and handlers
  */
-export const useGeoAi = () => {
+export const useGeoAi = ({ onResponse } = {}) => {
     // Local state for input (UI state only)
     const [aiInput, setAiInput] = useState('');
 
@@ -39,17 +39,22 @@ export const useGeoAi = () => {
 
     // TanStack Query mutation for robust API interaction
     const mutation = useMutation({
-        mutationFn: askGeoAi,
+        mutationFn: ({ question, sessionId }) => askGeoAi(question, sessionId),
         onSuccess: (data) => {
             // Format response untuk disimpan di state
             const aiResponse = {
                 role: 'assistant',
-                content: data.answer?.analysis_summary || data.answer ||"Berikut hasil analisis data yang ditemukan.",
+                content: data.answer?.analysis_summary || data.answer || "Berikut hasil analisis data yang ditemukan.",
                 tableData: data.answer?.data || [],
                 status: data.answer?.status,
                 message: data.answer?.message
             };
             addMessage(aiResponse);
+
+            // Trigger callback if provided (e.g. for map auto-selection)
+            if (onResponse) {
+                onResponse(data);
+            }
         },
         onError: (error) => {
             console.error("Geo AI Error:", error);
@@ -70,13 +75,13 @@ export const useGeoAi = () => {
 
         // Optimistically add user message to Global Store
         const userMessage = { role: 'user', content: trimmedInput };
-        addMessage(userMessage);
+        const activeSessionId = addMessage(userMessage);
 
         // Clear input immediately
         setAiInput('');
 
         // Trigger the mutation
-        mutation.mutate(userMessage.content);
+        mutation.mutate({ question: userMessage.content, sessionId: activeSessionId });
 
     }, [aiInput, mutation, addMessage]);
 

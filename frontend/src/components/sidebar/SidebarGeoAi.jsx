@@ -1,11 +1,21 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import AiResponseTable from '../AiResponseTable';
 import AiMarkdownRenderer from '../AiMarkdownRenderer';
 import { useGeoAi } from '../../hooks/useGeoAi';
 import TrashIcon from '../icons/TrashIcon';
 import Tooltip from '../Tooltip';
+import { cleanRegionName } from '../../utils/mapUtils';
 
-const SidebarGeoAi = ({ isMobile }) => {
+const SidebarGeoAi = ({ isMobile, onRegionAutoSelect }) => {
+    const handleAiResponse = useCallback((data) => {
+        if (data.region && onRegionAutoSelect) {
+            const cleanedRegion = cleanRegionName(data.region);
+            if (cleanedRegion) {
+                onRegionAutoSelect(cleanedRegion);
+            }
+        }
+    }, [onRegionAutoSelect]);
+
     const {
         aiInput,
         setAiInput,
@@ -17,7 +27,7 @@ const SidebarGeoAi = ({ isMobile }) => {
         createNewSession,
         switchSession,
         deleteSession
-    } = useGeoAi();
+    } = useGeoAi({ onResponse: handleAiResponse });
 
     const [showHistory, setShowHistory] = React.useState(false);
     const messagesEndRef = useRef(null);

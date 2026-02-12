@@ -1,5 +1,4 @@
 import { fetchAuthenticated } from './authService';
-import { getAccessToken } from './tokenService';
 
 /**
  * Mengirim pertanyaan ke Geo AI service.
@@ -8,7 +7,7 @@ import { getAccessToken } from './tokenService';
  * @returns {Promise<object>} Promise yang me-resolve ke objek jawaban AI.
  * @throws {Error} Jika permintaan gagal.
  */
-export async function askGeoAi(question) {
+export async function askGeoAi(question, sessionId) {
     if (!question) {
         throw new Error('Pertanyaan tidak boleh kosong.');
     }
@@ -151,15 +150,14 @@ export async function askGeoAi(question) {
     // --- MOCK DATA LOGIC END ---
 
     // Fetch real data (no automatic fallback)
-    const token = getAccessToken();
     const response = await fetchAuthenticated('/ai/ask', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: { 
-            question, 
-            session_id: token 
+        body: {
+            question,
+            session_id: sessionId
         },
     });
 

@@ -46,3 +46,24 @@ export const toSlug = (text) => {
     .replace(/[^\w\-]+/g, '') // Hapus karakter non-word
     .replace(/\-\-+/g, '-');  // Ganti multiple - dengan single -
 };
+
+/**
+ * Membersihkan nama region dari karakter yang tidak diinginkan seperti tanda kutip berlebih.
+ * Contoh: "'DKI Jakarta'" -> "DKI Jakarta"
+ * @param {string} regionName 
+ * @returns {string} Cleaned region name
+ */
+export const cleanRegionName = (regionName) => {
+  if (!regionName) return null;
+
+  // Split by comma if multiple regions are provided
+  const parts = regionName.split(',');
+
+  // Clean and find the LAST valid part
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const cleaned = parts[i].trim().replace(/^['"]+|['"]+$/g, '').trim();
+    if (cleaned) return cleaned;
+  }
+
+  return null;
+};

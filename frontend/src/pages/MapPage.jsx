@@ -807,6 +807,34 @@ const MapPage = () => {
         }
     };
 
+    const handleAiRegionSelect = useCallback((regionName) => {
+        if (!regionName || !provinsiData) return;
+
+        // Cari provinsi yang cocok (case insensitive)
+        const matchedProv = provinsiData.find(p =>
+            p.properties.nama.toLowerCase() === regionName.toLowerCase()
+        );
+
+        if (matchedProv) {
+            const newSelection = {
+                provinceCode: matchedProv.properties.kode_prov,
+                provinceName: matchedProv.properties.nama
+            };
+
+            handleSelectionChange(newSelection);
+
+            // Update view mode and history
+            syncViewMode('region-only');
+            navigationHistory.current.push({ selection: newSelection, viewMode: 'region-only' });
+
+            // Switch to Admin tab to show selection if needed, or just stay on GeoAI
+            if (!activeSidebar) {
+                setActiveSidebar('geoAi'); // Keep focus on AI results
+                setIsSidebarHidden(false);
+            }
+        }
+    }, [provinsiData, handleSelectionChange, syncViewMode, activeSidebar]);
+
     const handleToggleUnifiedSidebar = () => {
         setIsSidebarHidden(prev => !prev);
     };
@@ -1009,6 +1037,7 @@ const MapPage = () => {
                                         isHidden={isSidebarHidden}
                                         onToggleVisibility={handleToggleUnifiedSidebar}
                                         activeView={getSidebarView()}
+                                        onRegionAutoSelect={handleAiRegionSelect}
                                         // Admin Props
                                         currentSelection={currentSelection}
                                         onSelectionChange={handleAdminSelectionChange}
