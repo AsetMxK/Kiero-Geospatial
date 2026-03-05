@@ -168,3 +168,32 @@ export async function askGeoAi(question, sessionId) {
     const data = await response.json();
     return data;
 }
+
+/**
+ * Mengirim feedback untuk response Geo AI.
+ * @async
+ * @param {string|number} rating - "1" untuk thumbs-up, "-1" untuk thumbs-down.
+ * @param {string} comment - Komentar opsional.
+ * @param {string} requestId - ID request dari pesan AI.
+ * @returns {Promise<object>}
+ */
+export async function sendGeoAiFeedback(rating, comment, requestId) {
+    const response = await fetchAuthenticated('/ai/feedback', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: {
+            rating: String(rating),
+            comment: comment || "",
+            request_id: requestId
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error(`Gagal mengirim feedback: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+}

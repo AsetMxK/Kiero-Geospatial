@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { askGeoAi } from '../utils/aiService';
+import { askGeoAi, sendGeoAiFeedback } from '../utils/aiService';
 import useGeoAiStore from '../stores/useGeoAiStore';
 
 /**
@@ -18,6 +18,7 @@ export const useGeoAi = ({ onResponse } = {}) => {
         sessions,
         currentSessionId,
         addMessage,
+        updateMessage,
         createNewSession,
         switchSession,
         deleteSession
@@ -47,7 +48,8 @@ export const useGeoAi = ({ onResponse } = {}) => {
                 content: data.answer?.analysis_summary || data.answer || "Berikut hasil analisis data yang ditemukan.",
                 tableData: data.answer?.data || [],
                 status: data.answer?.status,
-                message: data.answer?.message
+                message: data.answer?.message,
+                request_id: data.request_id || data.answer?.request_id || null // Simpan request_id untuk feedback
             };
             addMessage(aiResponse);
 
@@ -85,6 +87,27 @@ export const useGeoAi = ({ onResponse } = {}) => {
 
     }, [aiInput, mutation, addMessage]);
 
+    // TanStack Query mutation for Feedback
+    const feedbackMutation = useMutation({
+        mutationFn: ({ rating, comment, requestId }) => sendGeoAiFeedback(rating, comment, requestId),
+        onError: (error) => {
+            console.error("Gagal mengirim feedback:", error);
+        }
+    });
+
+    const handleFeedback = useCallback((messageId, requestId, rating, comment) => {
+        if (!currentSessionId || !messageId || !requestId) return;
+
+        // Optimistically update store
+        updateMessage(currentSessionId, messageId, {
+            feedback: { rating, comment },
+            hasFeedback: true
+        });
+
+        // Send to API
+        feedbackMutation.mutate({ rating, comment, requestId });
+    }, [currentSessionId, updateMessage, feedbackMutation]);
+
     return {
         // Chat State
         aiInput,
@@ -96,6 +119,7 @@ export const useGeoAi = ({ onResponse } = {}) => {
         // Actions
         handleAiSubmit,
         resetAi: mutation.reset,
+        handleFeedback,
 
         // Session / History Management
         currentSessionId,

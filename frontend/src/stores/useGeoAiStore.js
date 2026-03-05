@@ -67,7 +67,8 @@ const useGeoAiStore = create(
                 if (!sessions[currentSessionId]) return currentSessionId;
 
                 const session = sessions[currentSessionId];
-                const newMessages = [...session.messages, message];
+                const msgWithId = { id: uuidv4(), ...message }; // Ensure each message has a unique ID
+                const newMessages = [...session.messages, msgWithId];
 
                 // Auto-title logic: use first user message as title
                 let newTitle = session.title;
@@ -88,6 +89,32 @@ const useGeoAiStore = create(
                 }));
 
                 return currentSessionId;
+            },
+
+            /**
+             * Update a specific message in a session.
+             */
+            updateMessage: (sessionId, messageId, updates) => {
+                set((state) => {
+                    const session = state.sessions[sessionId];
+                    if (!session) return state;
+
+                    const newMessages = session.messages.map((msg) =>
+                        msg.id === messageId ? { ...msg, ...updates } : msg
+                    );
+
+                    return {
+                        ...state,
+                        sessions: {
+                            ...state.sessions,
+                            [sessionId]: {
+                                ...session,
+                                messages: newMessages,
+                                updatedAt: Date.now(),
+                            },
+                        },
+                    };
+                });
             },
 
             /**
