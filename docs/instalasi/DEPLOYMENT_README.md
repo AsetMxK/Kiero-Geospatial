@@ -104,6 +104,27 @@ Setelah instalasi Docker dan Nginx selesai (terutama jika Anda baru ditambahkan 
 mkdir -p /home/icon/geomap/logs
 ```
 
+### Step 4.1.5: Konfigurasi Firewall (UFW)
+Sebelum melakukan deployment, pastikan port yang dibutuhkan oleh Geomap dan layanan web terbuka di *firewall* server Anda.
+
+```bash
+# Pastikan port SSH (22) izin akses terbuka agar Anda tidak terblokir dari server!
+sudo ufw allow OpenSSH
+# Atau secara manual: sudo ufw allow 22/tcp
+
+# Port standar Web (Bila suatu saat dibutuhkan)
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+
+# Publik port spesifik Geomap
+sudo ufw allow 3000/tcp
+sudo ufw allow 4170/tcp
+
+# Aktifkan dan periksa status
+sudo ufw enable
+sudo ufw status
+```
+
 ### Step 4.2: Clone Project via GitHub
 **Pertama**, pastikan Anda telah menyiapkan SSH Deploy Key. Jika belum, pelajari panduannya di:
 **[=> Panduan Setup GitHub SSH Deploy Key](GITHUB_DEPLOY_GUIDE.md)**
