@@ -8,8 +8,8 @@ import { randomUUID } from 'crypto';
 const router = express.Router();
 
 const ALGORITHM = 'RS256';
-const PUBLIC_GATEWAY_URL = process.env.GATEWAY_URL || 'http://localhost:4000';
-const INTERNAL_PORT = process.env.PORT || 4000;
+const PUBLIC_GATEWAY_URL = process.env.GATEWAY_URL || 'http://localhost:3000';
+const INTERNAL_PORT = process.env.PORT || 3000;
 const INTERNAL_URL = `http://localhost:${INTERNAL_PORT}`;
 const TOKEN_ENDPOINT = `${INTERNAL_URL}/oauth/token`;
 const REFRESH_ENDPOINT = `${INTERNAL_URL}/oauth/refresh`;

@@ -31,7 +31,7 @@ const startServer = async () => {
   }
 
   const app = express();
-  const port = process.env.PORT || 4000;
+  const port = process.env.PORT || 3000;
 
   // Middleware
   app.use(express.json());
@@ -57,19 +57,19 @@ const startServer = async () => {
   });
 
   // Rute Publik: Otorisasi Klien (digunakan secara internal oleh proksi)
-  // URL: http://localhost:4000/oauth/token
+  // URL: http://localhost:3000/oauth/token
   app.use('/oauth', authRouter);
 
   // Rute Aman Baru: Proksi untuk Frontend Mendapatkan Token
-  // URL: http://localhost:4000/auth-proxy/proxy-token
+  // URL: http://localhost:3000/auth-proxy/proxy-token
   app.use('/auth-proxy', proxyRouter);
 
   // Rute AI: Proksi ke AI Service
-  // URL: http://localhost:4000/ai/ask
+  // URL: http://localhost:3000/ai/ask
   app.use('/ai', aiRouter);
 
   // Rute Terproteksi: Proksi ke Resource Server Internal
-  // URL: http://localhost:4000/api/*
+  // URL: http://localhost:3000/api/*
   app.use('/api', gatewayRouter);
 
   // Penanganan rute tidak ditemukan

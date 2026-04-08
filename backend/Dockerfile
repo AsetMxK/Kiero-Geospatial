@@ -23,7 +23,7 @@ RUN mkdir -p logs && mkdir -p archives && chown -R node:node /app
 USER node
 
 # Expose port
-EXPOSE 3000
+EXPOSE 3001
 
 # Start command
 CMD ["npm", "run", "start"]

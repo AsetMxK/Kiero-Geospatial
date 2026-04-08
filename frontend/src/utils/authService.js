@@ -2,7 +2,7 @@ import axios from 'axios';
 import apiClient from './apiClient';
 import { storeTokens, clearTokens as clearStoredTokens } from './tokenService';
 
-const GATEWAY_URL = import.meta.env.VITE_GATEWAY_URL || 'http://localhost:4000';
+const GATEWAY_URL = import.meta.env.VITE_GATEWAY_URL || 'http://localhost:3000';
 const PROXY_TOKEN_ENDPOINT = `${GATEWAY_URL}/auth-proxy/proxy-token`;
 const CLIENT_ID = import.meta.env.VITE_CLIENT_ID;
 

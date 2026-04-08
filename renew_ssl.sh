@@ -24,8 +24,12 @@ if [ $DIFF -lt $SAFE_MARGIN ]; then
     # Automate "yes" to overwrite prompt
     echo "y" | ./generate_ssl.sh
     
-    echo "🔄 Restarting Frontend to apply new cert..."
-    docker compose restart frontend
+    echo "📄 Copying certs to /etc/ssl..."
+    sudo cp ./keys/ssl/nginx.crt /etc/ssl/certs/geomap-selfsigned.crt
+    sudo cp ./keys/ssl/nginx.key /etc/ssl/private/geomap-selfsigned.key
+
+    echo "🔄 Reloading Nginx Global to apply new cert..."
+    sudo systemctl reload nginx
     echo "✅ Renewal Complete!"
 else
     DAYS=$((DIFF / 86400))
