@@ -3,6 +3,8 @@ services:
   gateway:
     build: ./geo-gateway
     restart: always
+    expose:
+      - "3000"
     ports:
       - "127.0.0.1:${GATEWAY_PORT:-13000}:3000"
     environment:
@@ -42,6 +44,8 @@ services:
   backend:
     build: ./backend
     restart: always
+    expose:
+      - "3001"
     environment:
       - PORT=3001
       - NODE_ENV=${NODE_ENV:-production}
@@ -82,15 +86,18 @@ services:
         - VITE_GATEWAY_URL=${GATEWAY_URL:-http://localhost:3000}
         - VITE_APP_BASE_URL=${VITE_APP_BASE_URL}
     restart: always
+    expose:
+      - "4170"
     ports:
       - "127.0.0.1:${FRONTEND_PORT:-14170}:4170"
     depends_on:
       - gateway
       - backend
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:4170"]
+      test: ["CMD", "nc", "-z", "localhost", "4170"]
       interval: 30s
       timeout: 10s
+      start_period: 10s
       retries: 3
     deploy:
       resources:

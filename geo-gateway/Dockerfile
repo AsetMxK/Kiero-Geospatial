@@ -20,7 +20,5 @@ RUN npx prisma generate
 RUN mkdir -p logs && mkdir -p archives && chown -R node:node /app
 USER node
 
-EXPOSE 3000
-
 # Start command
 CMD ["npm", "run", "start"]

@@ -23,10 +23,11 @@ RUN npm run build
 
 FROM nginx:alpine
 
+# Install netcat for healthcheck (minimal footprint)
+RUN apk add --no-cache busybox-extras
+
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-EXPOSE 4170
 
 CMD ["nginx", "-g", "daemon off;"]
