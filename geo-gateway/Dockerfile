@@ -6,36 +6,28 @@
 # =============================================================================
 
 # ---------------------------------------------------------------------------
-# Stage 1: Install production dependencies
+# Stage 1: Build — install deps, generate Prisma client, then prune
 # ---------------------------------------------------------------------------
-FROM node:20-alpine AS deps
+FROM node:20-alpine AS build
 
 WORKDIR /app
 
+# Copy package manifests
 COPY package.json package-lock.json ./
 
-RUN --mount=type=cache,target=/root/.npm,sharing=locked \
-    npm ci --omit=dev
-
-# ---------------------------------------------------------------------------
-# Stage 2: Generate Prisma Client
-# ---------------------------------------------------------------------------
-FROM node:20-alpine AS prisma
-
-WORKDIR /app
-
-COPY package.json package-lock.json ./
-
-# Full install needed for prisma CLI (devDependency)
+# Full install needed for Prisma CLI (devDependency)
 RUN --mount=type=cache,target=/root/.npm,sharing=locked \
     npm ci --ignore-scripts
 
+# Copy schema and generate client
 COPY prisma ./prisma
-
 RUN npx prisma generate
 
+# Prune devDependencies (keeps generated client intact)
+RUN npm prune --omit=dev
+
 # ---------------------------------------------------------------------------
-# Stage 3: Production Runtime
+# Stage 2: Production Runtime
 # ---------------------------------------------------------------------------
 FROM node:20-alpine AS runtime
 
@@ -50,12 +42,8 @@ RUN apk add --no-cache dumb-init && \
 
 WORKDIR /app
 
-# Copy production dependencies
-COPY --from=deps --chown=appuser:nodejs /app/node_modules ./node_modules
-
-# Copy generated Prisma client
-COPY --from=prisma /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=prisma /app/node_modules/@prisma ./node_modules/@prisma
+# Copy pruned production dependencies (includes generated Prisma client)
+COPY --from=build --chown=appuser:nodejs /app/node_modules ./node_modules
 
 # Copy application source selectively (no COPY . . — minimal attack surface)
 COPY --chown=appuser:nodejs package.json ./
