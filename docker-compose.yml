@@ -51,7 +51,7 @@ services:
       perms-fixer:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/health"]
       interval: 30s
       timeout: 10s
       start_period: 15s
@@ -94,7 +94,7 @@ services:
       gateway:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3001/health"]
       interval: 30s
       timeout: 10s
       start_period: 15s
@@ -118,11 +118,11 @@ services:
   frontend:
     build:
       context: ./frontend
-    environment:
-      - VITE_GOOGLE_MAPS_API_KEY=${VITE_GOOGLE_MAPS_API_KEY}
-      - VITE_CLIENT_ID=${VITE_CLIENT_ID}
-      - VITE_GATEWAY_URL=${GATEWAY_URL:-http://localhost:3000}
-      - VITE_APP_BASE_URL=${VITE_APP_BASE_URL}
+      args:
+        - VITE_GOOGLE_MAPS_API_KEY=${VITE_GOOGLE_MAPS_API_KEY}
+        - VITE_CLIENT_ID=${VITE_CLIENT_ID}
+        - VITE_GATEWAY_URL=${GATEWAY_URL:-http://localhost:3000}
+        - VITE_APP_BASE_URL=${VITE_APP_BASE_URL:-/}
     container_name: geo-frontend
     restart: unless-stopped
     security_opt:
@@ -137,7 +137,7 @@ services:
       backend:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4170/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:4170/health"]
       interval: 30s
       timeout: 10s
       start_period: 15s
