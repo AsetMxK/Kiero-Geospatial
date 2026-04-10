@@ -12,23 +12,17 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Build arguments for Vite (compile-time environment injection)
-ARG VITE_GOOGLE_MAPS_API_KEY
-ARG VITE_CLIENT_ID
-ARG VITE_GATEWAY_URL
-ARG VITE_APP_BASE_URL
-
-ENV VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY
-ENV VITE_CLIENT_ID=$VITE_CLIENT_ID
-ENV VITE_GATEWAY_URL=$VITE_GATEWAY_URL
-ENV VITE_APP_BASE_URL=$VITE_APP_BASE_URL
-
 COPY package.json package-lock.json ./
 
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci && npm cache clean --force
+RUN --mount=type=cache,target=/root/.npm,sharing=locked \
+    npm ci
 
 COPY . .
+
+# Create placeholder env file automatically from template (.env.example)
+# We use a Vite-safe placeholder (/___VAR___/) for the base URL to prevent triple-slash errors during build.
+RUN sed -n '/VITE_APP_BASE_URL/! s/^\(VITE_[^= ]*\)=.*/\1=__\1__/p' .env.example > .env && \
+    echo 'VITE_APP_BASE_URL="/___VITE_APP_BASE_URL___/"' >> .env
 
 RUN npm run build
 
@@ -45,6 +39,11 @@ LABEL maintainer="kiero-teknologi" \
 RUN rm -rf /etc/nginx/conf.d/default.conf /usr/share/nginx/html/*
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Copy runtime environment injection script
+COPY scripts/40-inject-envs.sh /docker-entrypoint.d/40-inject-envs.sh
+RUN chmod +x /docker-entrypoint.d/40-inject-envs.sh
+
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Set proper ownership (nginx user already exists in nginx:alpine)

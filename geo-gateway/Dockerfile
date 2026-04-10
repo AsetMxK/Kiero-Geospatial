@@ -14,8 +14,8 @@ WORKDIR /app
 
 COPY package.json package-lock.json ./
 
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --omit=dev && npm cache clean --force
+RUN --mount=type=cache,target=/root/.npm,sharing=locked \
+    npm ci --omit=dev
 
 # ---------------------------------------------------------------------------
 # Stage 2: Generate Prisma Client
@@ -27,8 +27,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 
 # Full install needed for prisma CLI (devDependency)
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --ignore-scripts && npm cache clean --force
+RUN --mount=type=cache,target=/root/.npm,sharing=locked \
+    npm ci --ignore-scripts
 
 COPY prisma ./prisma
 
