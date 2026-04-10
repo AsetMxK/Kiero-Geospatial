@@ -6,6 +6,21 @@
 # =============================================================================
 
 services:
+  # ─── Service 0: Permissions Fixer (Automated Setup) ──────────────────
+  perms-fixer:
+    image: alpine:latest
+    container_name: perms-fixer
+    user: root
+    volumes:
+      - ./keys:/app/keys
+    # Automatically fixes ownership and permissions for the non-root 'appuser' (UID 1001)
+    command: >
+      /bin/sh -c "
+      chown -R 1001:1001 /app/keys && 
+      chmod 644 /app/keys/gateway_private.pem &&
+      chmod 644 /app/keys/gateway_public.pem &&
+      echo '=> Permissions fixed for appuser (1001)'"
+
   # ─── Service 1: Geo Gateway ──────────────────────────────────────────
   gateway:
     build: ./geo-gateway
@@ -32,6 +47,9 @@ services:
     networks:
       - frontend
       - backend
+    depends_on:
+      perms-fixer:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
       interval: 30s
@@ -68,11 +86,13 @@ services:
       - GATEWAY_PUBLIC_KEY_PATH=/app/keys/gateway_public.pem
     volumes:
       - ./keys:/app/keys:ro
-    depends_on:
-      gateway:
-        condition: service_healthy
     networks:
       - backend
+    depends_on:
+      perms-fixer:
+        condition: service_completed_successfully
+      gateway:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/health"]
       interval: 30s
@@ -109,13 +129,13 @@ services:
       - no-new-privileges:true
     ports:
       - "127.0.0.1:${FRONTEND_PORT:-14170}:4170"
+    networks:
+      - frontend
     depends_on:
       gateway:
         condition: service_healthy
       backend:
         condition: service_healthy
-    networks:
-      - frontend
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4170/health"]
       interval: 30s
