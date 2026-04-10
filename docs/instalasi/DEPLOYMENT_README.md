@@ -240,13 +240,51 @@ This guarantees all traffic is secured and properly proxied by the Host Nginx.
 
 ## Appendix: Session Log (Troubleshooting & Decisions)
 
-### 1. DNS Resolution Failure
-**Issue**: `Temporary failure in name resolution` during `apt-get update`.
-**Cause**: Server DNS configuration was unstable or blocking external domains.
-**Fix**:
-- Modifying `/etc/resolv.conf` to use Google DNS (`nameserver 8.8.8.8`).
-- Updating `/etc/systemd/resolved.conf` with `DNS=8.8.8.8`.
-- Restarting services: `systemctl restart systemd-resolved`.
+### 1. DNS Hijacking & Resolution Failure
+**Issue**: `Temporary failure in name resolution` atau `404 Not Found` saat `apt update` / `apt install`.
+**Cause**: Jaringan korporat/ISP melakukan **DNS Hijacking** — permintaan DNS dibelokkan sehingga `archive.ubuntu.com` di-resolve ke IP palsu (`208.91.112.55`, IP "parkir" milik Network Solutions) alih-alih IP asli server Ubuntu.
+
+**Diagnosis**:
+```bash
+# 1. Cek apakah internet tersedia (ICMP)
+ping -c 3 8.8.8.8
+
+# 2. Cek apakah DNS dibelokkan
+nslookup archive.ubuntu.com 8.8.8.8
+# Jika hasilnya 208.91.112.55 → DNS Hijacked
+
+# 3. Paksa apt gunakan IPv4 saja (IPv6 sering gagal di jaringan terbatas)
+echo 'Acquire::ForceIPv4 "true";' | sudo tee /etc/apt/apt.conf.d/99force-ipv4
+```
+
+**Fix (Strategi Static DNS via `/etc/hosts`)**:
+Mintas DNS sepenuhnya dengan mendaftarkan IP asli repositori Ubuntu langsung ke sistem.
+
+**Langkah 1**: Scan IP mirror Ubuntu yang bisa diakses:
+```bash
+for ip in 185.125.190.36 185.125.190.39 91.189.91.81 91.189.91.82 91.189.91.83 91.189.91.84; do
+  echo -n "Testing $ip... "
+  curl -s -o /dev/null -w "HTTP %{http_code}" --connect-timeout 5 \
+    "http://$ip/ubuntu/dists/noble/InRelease" -H "Host: archive.ubuntu.com"
+  echo ""
+done
+# Cari IP yang mengembalikan HTTP 200
+```
+
+**Langkah 2**: Daftarkan IP yang berhasil (contoh: `91.189.91.82`):
+```bash
+echo "91.189.91.82 archive.ubuntu.com" | sudo tee -a /etc/hosts
+echo "91.189.91.82 security.ubuntu.com" | sudo tee -a /etc/hosts
+```
+
+**Langkah 3**: Bersihkan cache lama dan update ulang:
+```bash
+sudo apt clean
+sudo rm -rf /var/lib/apt/lists/*
+sudo apt update
+```
+
+> **Catatan**: IP yang berhasil bisa berubah seiring waktu. Jika suatu saat `apt update` gagal lagi, ulangi proses scanning di Langkah 1 untuk menemukan IP baru yang aktif.
 
 ### 2. Docker Permission Denied
 **Issue**: `permission denied while trying to connect to the Docker daemon socket`.
@@ -274,3 +312,19 @@ This guarantees all traffic is secured and properly proxied by the Host Nginx.
 **Fix**: **Nginx Global Reverse Proxy**.
 - Proxies requests from unified ports (e.g. `3000` via HTTPS directly to Gateway).
 - Browser sees frontend & API as HTTPS, resolving Mixed Content seamlessly across both Livechat and Geomap.
+
+### 6. APT 404 Not Found (Stale Package Metadata)
+**Issue**: `apt install` mengembalikan `404 Not Found` meskipun koneksi ke server repositori berhasil.
+**Cause**: Cache metadata lokal (`/var/lib/apt/lists/`) masih merujuk ke versi paket lama (misal `nginx 1.24.0-2ubuntu7`) yang sudah digantikan oleh versi baru di server (`1.24.0-2ubuntu7.6`). File `.deb` versi lama sudah dihapus dari repositori.
+**Fix**:
+```bash
+# Hapus semua cache metadata lama
+sudo apt clean
+sudo rm -rf /var/lib/apt/lists/*
+
+# Download metadata segar dari repositori
+sudo apt update
+
+# Ulangi instalasi (sekarang merujuk ke versi terbaru)
+sudo apt install -y <package-name>
+```

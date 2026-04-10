@@ -8,7 +8,6 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-package-lock.json
 dist
 dist-ssr
 *.local
@@ -31,8 +30,6 @@ dist-ssr
 *.pem
 archives
 *.csv
-*.txt
-*.pdf
 keys/
 temp_upload/
 # Stress test scripts - DO NOT DEPLOY

@@ -1,10 +1,18 @@
+# =============================================================================
+# Geo Map — Production Docker Compose
+#
+# 3 services: Gateway, Backend, Frontend
+# Network-isolated with frontend (bridge) + backend (internal) segmentation.
+# =============================================================================
+
 services:
-  # --- Service 1: Geo Gateway ---
+  # ─── Service 1: Geo Gateway ──────────────────────────────────────────
   gateway:
     build: ./geo-gateway
-    restart: always
-    expose:
-      - "3000"
+    container_name: geo-gateway
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     ports:
       - "127.0.0.1:${GATEWAY_PORT:-13000}:3000"
     environment:
@@ -21,11 +29,16 @@ services:
       - GATEWAY_PUBLIC_KEY_PATH=/app/keys/gateway_public.pem
     volumes:
       - ./keys:/app/keys:ro
+    networks:
+      - frontend
+      - backend
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "3000"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 15s
+    stop_grace_period: 30s
     deploy:
       resources:
         limits:
@@ -40,12 +53,13 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # --- Service 2: Backend ---
+  # ─── Service 2: Backend ──────────────────────────────────────────────
   backend:
     build: ./backend
-    restart: always
-    expose:
-      - "3001"
+    container_name: geo-backend
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     environment:
       - PORT=3001
       - NODE_ENV=${NODE_ENV:-production}
@@ -57,11 +71,15 @@ services:
     depends_on:
       gateway:
         condition: service_healthy
+    networks:
+      - backend
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "3001"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 15s
+    stop_grace_period: 30s
     deploy:
       resources:
         limits:
@@ -76,7 +94,7 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # --- Service 3: Frontend ---
+  # ─── Service 3: Frontend ────────────────────────────────────────────
   frontend:
     build:
       context: ./frontend
@@ -85,16 +103,21 @@ services:
         - VITE_CLIENT_ID=${VITE_CLIENT_ID}
         - VITE_GATEWAY_URL=${GATEWAY_URL:-http://localhost:3000}
         - VITE_APP_BASE_URL=${VITE_APP_BASE_URL}
-    restart: always
-    expose:
-      - "4170"
+    container_name: geo-frontend
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     ports:
       - "127.0.0.1:${FRONTEND_PORT:-14170}:4170"
     depends_on:
-      - gateway
-      - backend
+      gateway:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    networks:
+      - frontend
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "4170"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4170/health"]
       interval: 30s
       timeout: 10s
       start_period: 10s
@@ -112,3 +135,11 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+# ─── Networks ─────────────────────────────────────────────────────────
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+    internal: true
