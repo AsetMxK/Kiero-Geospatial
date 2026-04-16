@@ -8,7 +8,7 @@
 # ---------------------------------------------------------------------------
 # Stage 1: Build React App
 # ---------------------------------------------------------------------------
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -34,11 +34,14 @@ RUN npm run build
 # ---------------------------------------------------------------------------
 # Stage 2: Nginx Runtime
 # ---------------------------------------------------------------------------
-FROM nginx:1.27-alpine AS runtime
+FROM nginx:1.27-alpine-slim AS runtime
 
 LABEL maintainer="kiero-teknologi" \
       app.name="geo-frontend" \
       app.environment="production"
+
+# Apply system security patches
+RUN apk upgrade --no-cache
 
 # Remove default config and html
 RUN rm -rf /etc/nginx/conf.d/default.conf /usr/share/nginx/html/*

@@ -31,64 +31,79 @@ const useGeoAiStore = create(
             switchSession: (sessionId) => {
                 const { sessions } = get();
                 if (sessions[sessionId]) {
-                    set({ currentSessionId: sessionId });
+                    // Mark as read when switching to this session
+                    const newSessions = { ...sessions };
+                    newSessions[sessionId] = { ...newSessions[sessionId], hasUnread: false };
+                    
+                    set({ 
+                        currentSessionId: sessionId,
+                        sessions: newSessions
+                    });
                 }
             },
 
             /**
-             * Add a message to the CURRENT session.
-             * If no session is active (currentSessionId is null), creates one now.
+             * Add a message to a session.
+             * Supports isolated sessions via targetSessionId.
              */
-            addMessage: (message) => {
+            addMessage: (message, targetSessionId = null) => {
                 let { currentSessionId, sessions } = get();
+                const actualSessionId = targetSessionId || currentSessionId;
 
-                // Lazy Creation: If no active session, create one now
-                if (!currentSessionId) {
-                    const newId = uuidv4();
+                // Lazy Creation: If session doesn't exist, create one.
+                if (!actualSessionId || !sessions[actualSessionId]) {
+                    const newId = actualSessionId || uuidv4();
                     const newSession = {
                         id: newId,
                         title: 'New Chat',
                         messages: [],
                         createdAt: Date.now(),
                         updatedAt: Date.now(),
+                        hasUnread: false
                     };
 
-                    // Update local variables to use this new session
-                    currentSessionId = newId;
                     sessions = { ...sessions, [newId]: newSession };
-
-                    // Update state immediately so we can add the message
+                    
+                    // Update state immediately. Wait if there's no active session, make it active
                     set({
                         sessions,
-                        currentSessionId
+                        currentSessionId: currentSessionId ? currentSessionId : newId
                     });
                 }
 
-                if (!sessions[currentSessionId]) return currentSessionId;
-
-                const session = sessions[currentSessionId];
-                const msgWithId = { id: uuidv4(), ...message }; // Ensure each message has a unique ID
+                currentSessionId = get().currentSessionId; // Re-fetch in case it just generated
+                const workingSessionId = targetSessionId || currentSessionId;
+                const session = sessions[workingSessionId];
+                const msgWithId = { id: uuidv4(), ...message };
                 const newMessages = [...session.messages, msgWithId];
 
-                // Auto-title logic: use first user message as title
+                // Auto-title logic
                 let newTitle = session.title;
                 if (session.title === 'New Chat' && message.role === 'user') {
                     newTitle = message.content.substring(0, 30) + (message.content.length > 30 ? '...' : '');
                 }
 
+                // Check Unread Status
+                // If it's an assistant response AND we are NOT currently viewing this session, mark unread!
+                let isUnread = session.hasUnread || false;
+                if (message.role === 'assistant' && workingSessionId !== currentSessionId) {
+                    isUnread = true;
+                }
+
                 set((state) => ({
                     sessions: {
                         ...state.sessions,
-                        [currentSessionId]: {
+                        [workingSessionId]: {
                             ...session,
                             messages: newMessages,
                             title: newTitle,
                             updatedAt: Date.now(),
+                            hasUnread: isUnread
                         },
                     },
                 }));
 
-                return currentSessionId;
+                return workingSessionId;
             },
 
             /**

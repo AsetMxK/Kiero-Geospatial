@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import AiResponseTable from './AiResponseTable';
 
 /**
  * Robust Markdown Renderer for AI Responses
@@ -53,7 +54,7 @@ const AiMarkdownRenderer = ({ content, className = '' }) => {
         const headerLine = lines[0];
         const headers = headerLine
             .split('|')
-            .map((h) => h.trim())
+            .map((h) => h.trim().replace(/\*/g, ''))
             .filter((h) => h && !h.match(/^:?-+:?$/));
 
         const separatorIndex = lines.findIndex((line) => /^\|?\s*:?-+:?\s*\|/.test(line));
@@ -64,37 +65,25 @@ const AiMarkdownRenderer = ({ content, className = '' }) => {
             .map((line) =>
                 line
                     .split('|')
-                    .map((cell) => cell.trim())
+                    .map((cell) => cell.trim().replace(/\*/g, ''))
                     .filter((_, idx, arr) => idx > 0 && idx < arr.length - 1 || arr.length <= 2)
             );
 
+        // Convert rows to an array of objects for AiResponseTable
+        const tableData = rows.map((row) => {
+            const obj = {};
+            headers.forEach((header, idx) => {
+                const rawKey = header.replace(/\s+/g, '_').toLowerCase() || `kolom_${idx}`;
+                obj[rawKey] = row[idx] || '';
+            });
+            return obj;
+        });
+
+        if (tableData.length === 0) return null;
+
         return (
-            <div key={`table-${startKey}`} className="my-3 overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
-                <table className="w-full text-sm">
-                    <thead>
-                        <tr className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
-                            {headers.map((header, idx) => (
-                                <th
-                                    key={idx}
-                                    className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide"
-                                >
-                                    {parseInline(header)}
-                                </th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                        {rows.map((row, rowIdx) => (
-                            <tr key={rowIdx} className="bg-white hover:bg-gray-50 transition-colors">
-                                {headers.map((_, colIdx) => (
-                                    <td key={colIdx} className="px-4 py-2.5 text-gray-600">
-                                        {parseInline(row[colIdx] || '-')}
-                                    </td>
-                                ))}
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+            <div key={`table-wrapper-${startKey}`} className="my-4">
+                <AiResponseTable data={tableData} />
             </div>
         );
     };

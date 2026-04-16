@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon index.js",
-    "start": "node index.js"
+    "start": "node index.js",
+    "db:generate": "npx prisma generate"
   },
   "keywords": [],
   "author": "",
@@ -24,6 +25,10 @@
     "node-schedule": "^2.1.1",
     "winston": "^3.13.0",
     "winston-daily-rotate-file": "^5.0.0"
+  },
+  "overrides": {
+    "picomatch": "^4.0.4",
+    "brace-expansion": "^5.0.5"
   },
   "devDependencies": {
     "nodemon": "^3.1.10",

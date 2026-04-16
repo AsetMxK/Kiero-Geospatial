@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
+import { v4 as uuidv4 } from 'uuid';
 import { askGeoAi, sendGeoAiFeedback } from '../utils/aiService';
 import useGeoAiStore from '../stores/useGeoAiStore';
 
@@ -12,6 +13,7 @@ import useGeoAiStore from '../stores/useGeoAiStore';
 export const useGeoAi = ({ onResponse } = {}) => {
     // Local state for input (UI state only)
     const [aiInput, setAiInput] = useState('');
+    const [pendingSessions, setPendingSessions] = useState({});
 
     // Access Zustand store
     const {
@@ -41,7 +43,13 @@ export const useGeoAi = ({ onResponse } = {}) => {
     // TanStack Query mutation for robust API interaction
     const mutation = useMutation({
         mutationFn: ({ question, sessionId }) => askGeoAi(question, sessionId),
-        onSuccess: (data) => {
+        onMutate: (variables) => {
+            setPendingSessions(prev => ({ ...prev, [variables.sessionId]: true }));
+        },
+        onSettled: (data, error, variables) => {
+            setPendingSessions(prev => ({ ...prev, [variables.sessionId]: false }));
+        },
+        onSuccess: (data, variables) => {
             // Format response untuk disimpan di state
             const aiResponse = {
                 role: 'assistant',
@@ -51,33 +59,52 @@ export const useGeoAi = ({ onResponse } = {}) => {
                 message: data.answer?.message,
                 request_id: data.request_id || data.answer?.request_id || null // Simpan request_id untuk feedback
             };
-            addMessage(aiResponse);
+            addMessage(aiResponse, variables.sessionId);
 
             // Trigger callback if provided (e.g. for map auto-selection)
             if (onResponse) {
                 onResponse(data);
             }
         },
-        onError: (error) => {
+        onError: (error, variables) => {
             console.error("Geo AI Error:", error);
             const errorMessage = {
                 role: 'assistant',
                 content: 'Maaf, terjadi kesalahan saat memproses permintaan Anda. Silakan coba lagi.',
                 isError: true
             };
-            addMessage(errorMessage);
+            addMessage(errorMessage, variables.sessionId);
         }
     });
 
-    const handleAiSubmit = useCallback((e) => {
+    const handleAiSubmitContinue = useCallback((e) => {
         if (e) e.preventDefault();
 
         const trimmedInput = aiInput.trim();
-        if (!trimmedInput || mutation.isPending) return;
+        if (!trimmedInput || pendingSessions[currentSessionId]) return;
 
-        // Optimistically add user message to Global Store
+        // Optimistically add user message to current active Global Store session
         const userMessage = { role: 'user', content: trimmedInput };
-        const activeSessionId = addMessage(userMessage);
+        const activeSessionId = addMessage(userMessage, currentSessionId);
+
+        // Clear input immediately
+        setAiInput('');
+
+        // Trigger the mutation
+        mutation.mutate({ question: userMessage.content, sessionId: activeSessionId });
+
+    }, [aiInput, mutation, addMessage, currentSessionId, pendingSessions]);
+
+    const handleAiSubmitNew = useCallback((e) => {
+        if (e) e.preventDefault();
+
+        const trimmedInput = aiInput.trim();
+        if (!trimmedInput) return; // New Session is naturally not pending
+
+        // Memaksa membuat sesi background baru khusus dari tab history
+        const newSessionId = uuidv4();
+        const userMessage = { role: 'user', content: trimmedInput };
+        const activeSessionId = addMessage(userMessage, newSessionId);
 
         // Clear input immediately
         setAiInput('');
@@ -113,11 +140,12 @@ export const useGeoAi = ({ onResponse } = {}) => {
         aiInput,
         setAiInput,
         aiMessages,
-        isAiLoading: mutation.isPending, // v5 syntax
+        isAiLoading: currentSessionId ? !!pendingSessions[currentSessionId] : false, // Spesifik hanya memblokir session yang statusnya pending
         aiError: mutation.error,
 
         // Actions
-        handleAiSubmit,
+        handleAiSubmitContinue,
+        handleAiSubmitNew,
         resetAi: mutation.reset,
         handleFeedback,
 

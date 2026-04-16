@@ -8,7 +8,7 @@
 # ---------------------------------------------------------------------------
 # Stage 1: Build — install deps, generate Prisma client, then prune
 # ---------------------------------------------------------------------------
-FROM node:20-alpine AS build
+FROM node:22-alpine AS build
 
 WORKDIR /app
 
@@ -29,14 +29,15 @@ RUN npm prune --omit=dev
 # ---------------------------------------------------------------------------
 # Stage 2: Production Runtime
 # ---------------------------------------------------------------------------
-FROM node:20-alpine AS runtime
+FROM node:22-alpine AS runtime
 
 LABEL maintainer="kiero-teknologi" \
       app.name="geo-gateway" \
       app.environment="production"
 
-# dumb-init + non-root user in single layer
+# dumb-init + non-root user + system upgrade in single layer
 RUN apk add --no-cache dumb-init && \
+    apk upgrade --no-cache && \
     addgroup -g 1001 -S nodejs && \
     adduser -S appuser -u 1001 -G nodejs
 

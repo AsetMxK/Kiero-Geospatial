@@ -147,7 +147,8 @@ const SidebarGeoAi = ({ isMobile, onRegionAutoSelect }) => {
         setAiInput,
         aiMessages,
         isAiLoading,
-        handleAiSubmit,
+        handleAiSubmitContinue,
+        handleAiSubmitNew,
         sessions,
         currentSessionId,
         createNewSession,
@@ -156,8 +157,18 @@ const SidebarGeoAi = ({ isMobile, onRegionAutoSelect }) => {
         handleFeedback
     } = useGeoAi({ onResponse: handleAiResponse });
 
+    const handleFormSubmit = (e) => {
+        if (e) e.preventDefault();
+        if (showHistory) {
+            handleAiSubmitNew(e);
+        } else {
+            handleAiSubmitContinue(e);
+        }
+    };
+
     const [showHistory, setShowHistory] = React.useState(false);
     const messagesEndRef = useRef(null);
+    const textareaRef = useRef(null);
 
     // Auto-scroll to bottom when messages change
     useEffect(() => {
@@ -165,6 +176,13 @@ const SidebarGeoAi = ({ isMobile, onRegionAutoSelect }) => {
             messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
         }
     }, [aiMessages, isAiLoading, showHistory]);
+
+    // Kembalikan tinggi textarea ke default saat input dibersihkan (setelah dikirim)
+    useEffect(() => {
+        if (aiInput === '' && textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+        }
+    }, [aiInput]);
 
     // Format date helper
     const formatDate = (timestamp) => {
@@ -243,10 +261,19 @@ const SidebarGeoAi = ({ isMobile, onRegionAutoSelect }) => {
                                     }`}
                             >
                                 <div className="flex justify-between items-start mb-1">
-                                    <h3 className={`font-medium text-sm line-clamp-1 ${currentSessionId === session.id ? 'text-blue-700' : 'text-gray-800'
-                                        }`}>
-                                        {session.title || 'Percakapan Baru'}
-                                    </h3>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className={`font-medium text-sm line-clamp-1 ${currentSessionId === session.id ? 'text-blue-700' : 'text-gray-800'
+                                            }`}>
+                                            {session.title || 'Percakapan Baru'}
+                                        </h3>
+                                        {/* Unread Message Indicator (Tampil ketika ada respons AI background yang belum dilihat) */}
+                                        {session.hasUnread && (
+                                            <span className="flex h-2.5 w-2.5">
+                                                <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-blue-400 opacity-75"></span>
+                                                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                                            </span>
+                                        )}
+                                    </div>
                                     <Tooltip content="Hapus chat">
                                         <button
                                             onClick={(e) => {
@@ -309,11 +336,11 @@ const SidebarGeoAi = ({ isMobile, onRegionAutoSelect }) => {
                             return (
                                 <div
                                     key={idx}
-                                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} group mb-1`}
+                                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} group mb-1 min-w-0`}
                                 >
-                                    <div className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'} max-w-[95%]`}>
+                                    <div className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'} max-w-[95%] sm:max-w-[90%] min-w-0`}>
                                         <div
-                                            className={`rounded-2xl px-4 py-3 ${msg.role === 'user'
+                                            className={`rounded-2xl px-4 py-3 w-full overflow-hidden ${msg.role === 'user'
                                                 ? 'bg-blue-600 text-white rounded-br-md shadow-sm'
                                                 : isErrorState
                                                     ? 'bg-red-50 text-red-700 border border-red-200 rounded-bl-md' // Style Merah jika Error
@@ -375,9 +402,10 @@ const SidebarGeoAi = ({ isMobile, onRegionAutoSelect }) => {
 
             {/* Input Area */}
             <div className="flex-shrink-0 border-t border-gray-200 bg-white p-4">
-                <form onSubmit={handleAiSubmit} className="max-w-lg mx-auto">
+                <form onSubmit={handleFormSubmit} className="max-w-lg mx-auto">
                     <div className="flex items-center gap-2 bg-gray-100 rounded-2xl p-1.5 pl-4 border border-gray-200 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent transition-all">
                         <textarea
+                            ref={textareaRef}
                             value={aiInput}
                             onChange={(e) => {
                                 setAiInput(e.target.value);
@@ -388,22 +416,19 @@ const SidebarGeoAi = ({ isMobile, onRegionAutoSelect }) => {
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter' && !e.shiftKey) {
                                     e.preventDefault();
-                                    handleAiSubmit(e);
-                                    // Reset height
-                                    e.target.style.height = 'auto';
+                                    handleFormSubmit(e);
                                 }
                             }}
                             placeholder="Tanyakan sesuatu tentang wilayah..."
                             className="flex-1 bg-transparent text-sm resize-none focus:outline-none py-2 custom-scrollbar placeholder-gray-500"
                             rows={1}
                             style={{ maxHeight: '80px', minHeight: '24px' }}
-                            disabled={isAiLoading}
                         />
                         <Tooltip content="Kirim pertanyaan">
                             <button
                                 type="submit"
-                                disabled={!aiInput.trim() || isAiLoading}
-                                className={`flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 ${aiInput.trim() && !isAiLoading
+                                disabled={!aiInput.trim() || (!showHistory && isAiLoading)} // Hanya lock jika user ada di session yang sama dengan yang sedang loading. Jika di tab history, bebas submit.
+                                className={`flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 ${aiInput.trim() && (!(!showHistory && isAiLoading))
                                     ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md hover:shadow-lg hover:-translate-y-0.5'
                                     : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                                     }`}
