@@ -12,7 +12,14 @@ let gatewayPublicKey;
  */
 export async function loadGatewayPublicKey() {
     try {
-        const publicKeyPem = fs.readFileSync(process.env.GATEWAY_PUBLIC_KEY_PATH, 'utf-8');
+        const path = process.env.GATEWAY_PUBLIC_KEY_PATH;
+        // Bypassing Node.js fstat() to prevent Docker Windows VirtioFS EIO bugs.
+        const fd = fs.openSync(path, 'r');
+        const buffer = Buffer.alloc(8192);
+        const bytesRead = fs.readSync(fd, buffer, 0, 8192, 0);
+        fs.closeSync(fd);
+        const publicKeyPem = buffer.subarray(0, bytesRead).toString('utf-8');
+        
         gatewayPublicKey = await jose.importSPKI(publicKeyPem, ALGORITHM);
         console.log("Gateway public key loaded successfully.");
     } catch (error) {

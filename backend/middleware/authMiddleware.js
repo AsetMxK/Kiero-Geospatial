@@ -17,9 +17,13 @@ let gatewayPublicKey;
  */
 export async function loadBackendDependencies() {
   try {
-    // Membaca public key milik GATEWAY saat aplikasi pertama kali berjalan.
-    // Kunci ini digunakan untuk memverifikasi access_token yang datang dari gateway.
-    gatewayPublicKey = fs.readFileSync(process.env.GATEWAY_PUBLIC_KEY_PATH);
+    const path = process.env.GATEWAY_PUBLIC_KEY_PATH;
+    // Bypassing Node.js fstat() to prevent Docker Windows VirtioFS EIO bugs.
+    const fd = fs.openSync(path, 'r');
+    const buffer = Buffer.alloc(8192);
+    const bytesRead = fs.readSync(fd, buffer, 0, 8192, 0);
+    fs.closeSync(fd);
+    gatewayPublicKey = buffer.subarray(0, bytesRead);
     console.log("Backend successfully loaded the gateway public key.");
   } catch (error) {
     console.error("FATAL ERROR: Could not read gateway public key. Make sure GATEWAY_PUBLIC_KEY_PATH in .env is correct.", error);

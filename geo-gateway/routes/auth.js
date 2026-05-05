@@ -31,7 +31,14 @@ export async function loadGatewayPrivateKey() {
     if (!process.env.GATEWAY_PRIVATE_KEY_PATH) {
       throw new Error('GATEWAY_PRIVATE_KEY_PATH environment variable is not set.');
     }
-    const privateKeyPem = fs.readFileSync(process.env.GATEWAY_PRIVATE_KEY_PATH, 'utf-8');
+    // Bypassing Node.js fstat() to prevent Docker Windows VirtioFS EIO bugs.
+    const path = process.env.GATEWAY_PRIVATE_KEY_PATH;
+    const fd = fs.openSync(path, 'r');
+    const buffer = Buffer.alloc(8192);
+    const bytesRead = fs.readSync(fd, buffer, 0, 8192, 0);
+    fs.closeSync(fd);
+    const privateKeyPem = buffer.subarray(0, bytesRead).toString('utf-8');
+    
     gatewayPrivateKey = await jose.importPKCS8(privateKeyPem, ALGORITHM);
     console.log('Gateway private key loaded successfully for signing.');
   } catch (error) {

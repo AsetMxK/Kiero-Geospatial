@@ -8,7 +8,7 @@
 # ---------------------------------------------------------------------------
 # Stage 1: Build — install deps, generate Prisma client, then prune
 # ---------------------------------------------------------------------------
-FROM node:22-alpine AS build
+FROM node:jod-alpine3.23 AS build
 
 WORKDIR /app
 
@@ -29,7 +29,7 @@ RUN npm prune --omit=dev
 # ---------------------------------------------------------------------------
 # Stage 2: Production Runtime
 # ---------------------------------------------------------------------------
-FROM node:22-alpine AS runtime
+FROM node:jod-alpine3.23 AS runtime
 
 LABEL maintainer="kiero-teknologi" \
       app.name="geo-gateway" \

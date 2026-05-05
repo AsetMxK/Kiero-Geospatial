@@ -8,7 +8,7 @@
 services:
   # ─── Service 0: Permissions Fixer (Automated Setup) ──────────────────
   perms-fixer:
-    image: alpine:latest
+    image: alpine:3.23
     container_name: perms-fixer
     user: root
     volumes:
