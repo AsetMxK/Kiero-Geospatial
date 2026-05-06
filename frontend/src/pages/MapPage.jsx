@@ -81,6 +81,7 @@ const MapPage = () => {
     const [fabPosition, setFabPosition] = useState(null);
     const mapContainerRef = useRef(null);
     const pannedTicketId = useRef(null);
+    const pannedPinId = useRef(null);
     const [mapViewport, setMapViewport] = useState(null);
     const [urlZoom] = useState(() => {
         const params = new URLSearchParams(window.location.search);
@@ -239,7 +240,12 @@ const MapPage = () => {
         if (activeTicketId && activeTicketId !== pannedTicketId.current) {
             const activeTicket = mapData.find(t => t.id === activeTicketId);
             if (activeTicket) {
-                setPanToTarget({ lat: activeTicket.coordinates.lat, lng: activeTicket.coordinates.lng, zoom: 15 });
+                setPanToTarget({
+                    lat: activeTicket.coordinates.lat,
+                    lng: activeTicket.coordinates.lng,
+                    zoom: 15,
+                    verticalOffset: 150
+                });
                 pannedTicketId.current = activeTicketId;
             }
         } else if (!activeTicketId) {
@@ -247,10 +253,27 @@ const MapPage = () => {
         }
     }, [activeTicketId, mapData]);
 
+    useEffect(() => {
+        if (activePinId && activePinId !== pannedPinId.current) {
+            const activePin = pins.find(p => p.id === activePinId);
+            if (activePin) {
+                setPanToTarget({
+                    lat: activePin.lat,
+                    lng: activePin.lng,
+                    verticalOffset: 150
+                });
+                pannedPinId.current = activePinId;
+            }
+        } else if (!activePinId) {
+            pannedPinId.current = null;
+        }
+    }, [activePinId, pins]);
+
     const handleActivePinChange = useCallback((pinId) => {
         setActivePinId(pinId);
         if (pinId) {
             setActiveTicketId(null);
+            setFabPosition(null);
         }
     }, []);
 
@@ -258,6 +281,7 @@ const MapPage = () => {
         setActiveTicketId(ticketId);
         if (ticketId) {
             setActivePinId(null);
+            setFabPosition(null);
         }
     }, []);
 
@@ -337,7 +361,12 @@ const MapPage = () => {
             }
 
             setActivePinId(targetPin.id);
-            setPanToTarget({ lat: targetPin.lat, lng: targetPin.lng, zoom: 15 });
+            setPanToTarget({
+                lat: targetPin.lat,
+                lng: targetPin.lng,
+                zoom: 15,
+                verticalOffset: 150
+            });
 
             params.delete('share_lat');
             params.delete('share_lng');
@@ -425,15 +454,15 @@ const MapPage = () => {
         setAugmentedInfoData({ properties: augmentedProperties, level });
     }, [rawInfoData, currentSelection, kabkotaData, kecamatanData, desaData]);
 
-    const panToWithOffset = useCallback((target, zoom) => {
+    const panToWithOffset = useCallback((target, zoom, verticalOffsetPx = 0) => {
         if (!mapInstance) return;
 
         const isSidebarVisible = (activeSidebar === 'wilayah' || activeSidebar === 'regionInfo' || activeSidebar === 'history' || activeSidebar === 'geoAi') && !isSidebarHidden;
-        const totalOffset = (ACTION_SIDEBAR_WIDTH + (isSidebarVisible ? REGION_INFO_SIDEBAR_WIDTH : 0)) / 2;
+        const totalHorizontalOffset = (ACTION_SIDEBAR_WIDTH + (isSidebarVisible ? REGION_INFO_SIDEBAR_WIDTH : 0)) / 2;
 
         const projection = mapInstance.getProjection();
         if (!projection) {
-            setTimeout(() => panToWithOffset(target, zoom), 100);
+            setTimeout(() => panToWithOffset(target, zoom, verticalOffsetPx), 100);
             return;
         }
 
@@ -443,8 +472,8 @@ const MapPage = () => {
         const scale = Math.pow(2, finalZoom);
 
         const newCenterPoint = new window.google.maps.Point(
-            targetPoint.x - (totalOffset / scale),
-            targetPoint.y
+            targetPoint.x - (totalHorizontalOffset / scale),
+            targetPoint.y - (verticalOffsetPx / scale)
         );
         const newCenterLatLng = projection.fromPointToLatLng(newCenterPoint);
 
@@ -456,11 +485,9 @@ const MapPage = () => {
 
     useEffect(() => {
         if (panToTarget && mapInstance) {
-            panToWithOffset(panToTarget, panToTarget.zoom);
+            panToWithOffset(panToTarget, panToTarget.zoom, panToTarget.verticalOffset || 0);
             setPanToTarget(null);
         }
-
-
     }, [panToTarget, mapInstance, panToWithOffset]);
 
     useEffect(() => {
@@ -700,7 +727,7 @@ const MapPage = () => {
 
             } else {
                 // No region found (e.g. outside Indonesia or data missing), just fly to point
-                setPanToTarget({ lat, lng, zoom: 17 });
+                setPanToTarget({ lat, lng, zoom: 15, verticalOffset: 150 });
                 // Optionally add a marker or temporary pin
                 setSearchError("Lokasi berada di luar wilayah administratif yang terdata.");
             }
@@ -744,7 +771,12 @@ const MapPage = () => {
         setPins(prevPins => [...prevPins, newPinWithId].slice(-5));
         setActivePinId(newPinWithId.id);
         setNewlyCreatedPinId(newPinWithId.id);
-        setPanToTarget({ lat: newPinWithId.lat, lng: newPinWithId.lng, zoom: 15 });
+        setPanToTarget({
+            lat: newPinWithId.lat,
+            lng: newPinWithId.lng,
+            zoom: 15,
+            verticalOffset: 150
+        });
     }, []);
 
     const handleUpdatePin = useCallback((id, updates) => {
@@ -772,7 +804,12 @@ const MapPage = () => {
 
     const handleGoToPin = (pin) => {
         setActivePinId(pin.id);
-        setPanToTarget({ lat: pin.lat, lng: pin.lng, zoom: 15 });
+        setPanToTarget({
+            lat: pin.lat,
+            lng: pin.lng,
+            zoom: 15,
+            verticalOffset: 150
+        });
         setActiveSidebar(null); // Close history sidebar
     };
 
@@ -781,7 +818,12 @@ const MapPage = () => {
         if (indicator.count === 1) {
             const pin = indicator.pins[0];
             setActivePinId(pin.id);
-            setPanToTarget({ lat: pin.lat, lng: pin.lng, zoom: 15 });
+            setPanToTarget({
+                lat: pin.lat,
+                lng: pin.lng,
+                zoom: 15,
+                verticalOffset: 150
+            });
         } else {
             const bounds = new window.google.maps.LatLngBounds();
             indicator.pins.forEach(pin => bounds.extend(new window.google.maps.LatLng(pin.lat, pin.lng)));
