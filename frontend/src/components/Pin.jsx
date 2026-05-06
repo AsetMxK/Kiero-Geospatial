@@ -299,8 +299,10 @@ const Pin = ({ pin, onDelete, onUpdateTitle, onUpdatePin, isActive, onSelect, is
                 position={{ lat: pin.lat, lng: pin.lng }}
                 onClick={onSelect}
             >
-                <div className={animationClass}>
-                    <MapMarkerIcon className={isActive ? "text-red-600 drop-shadow-lg" : "text-red-500 drop-shadow"} />
+                <div className={`${animationClass} flex flex-col items-center`}>
+                    <MapMarkerIcon className={`transition-transform duration-200 ${isActive ? 'text-red-600 scale-110 drop-shadow-xl' : 'text-red-500 hover:scale-105 drop-shadow-md'}`} />
+                    {/* Ground Shadow */}
+                    <div className={`w-4 h-1.5 bg-black/25 rounded-[100%] blur-[1px] -mt-1 transition-all duration-200 ${isActive ? 'scale-150 bg-black/30' : 'scale-100'}`}></div>
                 </div>
             </AdvancedMarker>
             {isInfoWindowVisible && (

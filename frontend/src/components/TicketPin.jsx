@@ -145,10 +145,14 @@ const TicketPin = ({
                 position={{ lat, lng }}
                 onClick={onSelect}
             >
+            <div className="flex flex-col items-center">
                 <MapMarkerIcon
-                    className={`drop-shadow transition-transform duration-200 ${isActive ? 'scale-110 drop-shadow-lg' : 'hover:scale-105'}`}
+                    className={`transition-transform duration-200 ${isActive ? 'scale-110 drop-shadow-xl' : 'hover:scale-105 drop-shadow-md'}`}
                     style={{ color: pinColorHsl }}
                 />
+                {/* Ground Shadow */}
+                <div className={`w-4 h-1.5 bg-black/25 rounded-[100%] blur-[1px] -mt-1 transition-all duration-200 ${isActive ? 'scale-150 bg-black/30' : 'scale-100'}`}></div>
+            </div>
             </AdvancedMarker>
             {isActive && (
                 <InfoWindow
