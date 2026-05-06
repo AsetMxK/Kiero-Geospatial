@@ -329,7 +329,7 @@ const MapComponent = ({
                 // Check if we clicked on a Street View available location (using TanStack Query cache)
                 queryClient.fetchQuery({
                     queryKey: ['streetview-availability', clickedLatLng.lat(), clickedLatLng.lng(), 50],
-                    queryFn: () => fetchStreetViewAvailability({ lat: clickedLatLng.lat(), lng: clickedLatLng.lng() }, 100),
+                    queryFn: () => fetchStreetViewAvailability({ lat: clickedLatLng.lat(), lng: clickedLatLng.lng() }, 50),
                     staleTime: 1000 * 60 * 60
                 }).then((data) => {
                     if (data.available) {

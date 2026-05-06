@@ -16,8 +16,13 @@ import Tooltip from './Tooltip';
 const StatsDisplay = ({ stats, loading }) => {
   if (loading) {
     return (
-      <div className="text-sm text-gray-500 min-h-[72px] flex items-center justify-center">
-        Memuat data...
+      <div className="text-sm text-gray-500 min-h-[72px] flex items-center justify-center gap-1.5">
+        <span>Memuat data</span>
+        <div className="flex gap-1 items-center mt-1">
+          <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+          <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+          <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"></div>
+        </div>
       </div>
     );
   }

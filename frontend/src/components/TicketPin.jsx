@@ -58,7 +58,7 @@ const TicketPin = ({
     // Cek ketersediaan Street View dengan TanStack Query
     const { data: svAvailability, isLoading: isSvChecking } = useStreetViewAvailability(
         { lat, lng },
-        100,
+        50,
         isActive
     );
 

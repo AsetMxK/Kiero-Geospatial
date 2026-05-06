@@ -96,7 +96,7 @@ const Pin = ({ pin, onDelete, onUpdateTitle, onUpdatePin, isActive, onSelect, is
     // Cek ketersediaan Street View dengan TanStack Query
     const { data: svAvailability, isLoading: isSvChecking } = useStreetViewAvailability(
         { lat: pin.lat, lng: pin.lng },
-        100,
+        50,
         isActive
     );
 
@@ -347,12 +347,12 @@ const Pin = ({ pin, onDelete, onUpdateTitle, onUpdatePin, isActive, onSelect, is
                             {/* Admin Info - Compact Card Style */}
                             {pin.isLoadingAdminInfo ? (
                                 <div className="flex items-center gap-2 text-xs text-gray-500 py-2">
+                                    <span>Mencari wilayah</span>
                                     <div className="flex gap-1 h-3 items-center">
                                         <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
                                         <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
                                         <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"></div>
                                     </div>
-                                    <span>Memuat info wilayah...</span>
                                 </div>
                             ) : pin.adminInfo && pin.adminInfo.provinsi ? (
                                 <div className="bg-gray-50 rounded-md p-2 text-xs border border-gray-100">
@@ -390,12 +390,12 @@ const Pin = ({ pin, onDelete, onUpdateTitle, onUpdatePin, isActive, onSelect, is
                             {/* Address Section */}
                             {isLoadingAddress ? (
                                 <div className="flex items-center gap-2 text-xs text-gray-500">
+                                    <span>Mencari alamat</span>
                                     <div className="flex gap-1 h-3 items-center">
                                         <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
                                         <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
                                         <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"></div>
                                     </div>
-                                    <span>Mencari alamat...</span>
                                 </div>
                             ) : address && (
                                 <div className="flex gap-2 items-start text-xs text-gray-600">
