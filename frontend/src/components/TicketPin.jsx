@@ -1,8 +1,11 @@
 import { useState } from 'react';
-import { AdvancedMarker, InfoWindow, useAdvancedMarkerRef } from '@vis.gl/react-google-maps';
+import { AdvancedMarker, InfoWindow, useAdvancedMarkerRef, useMap } from '@vis.gl/react-google-maps';
 import MapMarkerIcon from './icons/MapMarkerIcon';
 import { getStatusColorHsl } from '../utils/statusColors';
 import Tooltip from './Tooltip';
+import StreetViewIcon from './icons/StreetViewIcon';
+import { useStreetViewAvailability } from '../hooks/useStreetViewAvailability';
+import { useStreetViewMarker } from '../hooks/useStreetViewMarker';
 
 /**
  * Komponen sederhana yang menampilkan status pemuatan di dalam InfoWindow.
@@ -39,13 +42,83 @@ const TicketPin = ({
     onSelect,
     details,
     isLoadingDetails,
-    errorDetails
+    errorDetails,
+    onStreetViewVisibilityChange,
+    onStreetViewUpdate
 }) => {
     const [markerRef, marker] = useAdvancedMarkerRef();
     const [isCopySuccess, setIsCopySuccess] = useState(false);
+    const map = useMap();
+    const [isEnteringSv, setIsEnteringSv] = useState(false);
 
     const ticketDetails = details?.data;
     const pinColorHsl = getStatusColorHsl(status, isActive);
+
+    // Cek ketersediaan Street View dengan TanStack Query
+    const { data: svAvailability, isLoading: isSvChecking } = useStreetViewAvailability(
+        { lat, lng },
+        50,
+        isActive
+    );
+
+    const isSvAvailable = svAvailability?.available;
+
+    const handleEnterStreetView = () => {
+        if (!map || !window.google || isSvAvailable === false || isEnteringSv) return;
+
+        setIsEnteringSv(true);
+        const sv = map.getStreetView();
+
+        // Gunakan data dari cache jika tersedia
+        if (svAvailability?.pano) {
+            if (onStreetViewUpdate) {
+                onStreetViewUpdate({
+                    address: svAvailability.description || ticketDetails?.address || 'Lokasi Tiket',
+                    position: { lat: svAvailability.latLng.lat(), lng: svAvailability.latLng.lng() }
+                });
+            }
+            sv.setPano(svAvailability.pano);
+            sv.setVisible(true);
+            if (onStreetViewVisibilityChange) {
+                onStreetViewVisibilityChange(true);
+            }
+            setTimeout(() => setIsEnteringSv(false), 500);
+            return;
+        }
+
+        // Fallback jika tidak ada pano di cache
+        const svService = new google.maps.StreetViewService();
+        svService.getPanorama({
+            location: { lat, lng },
+            radius: 50,
+            source: google.maps.StreetViewSource.OUTDOOR
+        }, (data, status) => {
+            if (status === 'OK') {
+                if (onStreetViewUpdate) {
+                    onStreetViewUpdate({
+                        address: data.location.description || ticketDetails?.address || 'Lokasi Tiket',
+                        position: { lat: data.location.latLng.lat(), lng: data.location.latLng.lng() }
+                    });
+                }
+                sv.setPano(data.location.pano);
+                sv.setVisible(true);
+                if (onStreetViewVisibilityChange) {
+                    onStreetViewVisibilityChange(true);
+                }
+                setTimeout(() => setIsEnteringSv(false), 500);
+            } else {
+                setIsEnteringSv(false);
+            }
+        });
+    };
+
+    // Render Pin di Street View
+    const { marker: svMarker, isVisible: isSvVisible } = useStreetViewMarker({
+        position: { lat, lng },
+        title: ticketDetails?.ticket_number || 'Tiket',
+        color: pinColorHsl,
+        onClick: onSelect
+    });
 
     const handleCopy = () => {
         if (!ticketDetails) return;
@@ -55,7 +128,7 @@ const TicketPin = ({
             `Category: ${ticketDetails.category}`,
             `Status: ${ticketDetails.status}`,
             `Source: ${ticketDetails.channel_source || '-'}`,
-            `Phone: ${ticketDetails.account_id || '-'}`,
+            `Phone Number: ${ticketDetails.account_id || '-'}`,
             `Complaint: ${ticketDetails.complaint_detail || '-'}`
         ].join('\n');
 
@@ -79,11 +152,11 @@ const TicketPin = ({
             </AdvancedMarker>
             {isActive && (
                 <InfoWindow
-                    anchor={marker}
+                    anchor={isSvVisible && svMarker ? svMarker : marker}
                     onCloseClick={onSelect}
                     disableAutoPan={true}
                 >
-                    <div className="p-0 font-sans relative w-[260px]">
+                    <div className="p-0 font-sans relative w-[260px] overflow-hidden transform-gpu" style={{ transform: 'translateZ(0)' }}>
                         {/* Loading State */}
                         {isLoadingDetails && <InfoWindowLoading />}
 
@@ -100,9 +173,9 @@ const TicketPin = ({
                         {!isLoadingDetails && !errorDetails && ticketDetails && (
                             <>
                                 {/* Header */}
-                                <div className="flex items-start justify-between p-3 pb-2">
-                                    <div className="flex-1 pr-6">
-                                        <h3 className="font-semibold text-gray-900 text-sm leading-tight" title="Nomor Tiket">
+                                <div className="flex items-start justify-between p-3 pb-2 gap-2 w-full">
+                                    <div className="flex-1 min-w-0 pr-2">
+                                        <h3 className="font-semibold text-gray-900 text-sm leading-tight truncate" title={ticketDetails.ticket_number}>
                                             {ticketDetails.ticket_number}
                                         </h3>
                                         <div className="flex items-center gap-1 text-[10px] text-gray-500 mt-0.5">
@@ -114,7 +187,7 @@ const TicketPin = ({
                                     <Tooltip content="Tutup">
                                         <button
                                             onClick={onSelect}
-                                            className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors absolute right-2 top-2"
+                                            className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors"
                                         >
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
                                                 <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
@@ -161,11 +234,11 @@ const TicketPin = ({
                                     </div>
 
                                     {/* Footer Actions */}
-                                    <div className="pt-1">
+                                    <div className="pt-1 flex gap-2 items-stretch h-9">
                                         <button
                                             onClick={handleCopy}
                                             disabled={isCopySuccess}
-                                            className={`w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition ${isCopySuccess
+                                            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition ${isCopySuccess
                                                 ? 'bg-green-50 text-green-700 border border-green-200'
                                                 : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:text-gray-900'
                                                 }`}
@@ -187,6 +260,33 @@ const TicketPin = ({
                                                 </>
                                             )}
                                         </button>
+
+                                        {!isSvVisible && (
+                                            <Tooltip content={isSvAvailable === false ? "Street View Tidak Tersedia" : isSvChecking ? "Mengecek Street View..." : "Masuk Street View"}>
+                                                <button
+                                                    onClick={handleEnterStreetView}
+                                                    disabled={isSvAvailable === false || isSvChecking || isEnteringSv}
+                                                    className={`flex items-center justify-center px-3 py-1.5 rounded text-xs font-medium transition-colors h-full ${isSvAvailable === false
+                                                        ? 'text-gray-400 bg-gray-50 border border-gray-200 cursor-not-allowed'
+                                                        : isSvChecking || isEnteringSv
+                                                            ? 'text-gray-400 bg-gray-50 border border-gray-100 cursor-wait'
+                                                            : 'text-green-600 bg-green-50 hover:bg-green-100 border border-green-100'
+                                                        }`}
+                                                >
+                                                    {isEnteringSv ? (
+                                                        <div className="w-5 h-5 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                                                    ) : isSvChecking ? (
+                                                        <div className="flex gap-1 items-center justify-center w-5 h-5">
+                                                            <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                                                            <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                                                            <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"></div>
+                                                        </div>
+                                                    ) : (
+                                                        <StreetViewIcon className="w-5 h-5" disabled={isSvAvailable === false} />
+                                                    )}
+                                                </button>
+                                            </Tooltip>
+                                        )}
                                     </div>
                                 </div>
                             </>

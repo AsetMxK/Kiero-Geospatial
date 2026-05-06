@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Map, useMap } from '@vis.gl/react-google-maps';
+import { useQueryClient } from '@tanstack/react-query';
+import { fetchStreetViewAvailability } from '../hooks/useStreetViewAvailability';
 import { useBoundaryData } from '../hooks/useBoundaryData';
 import { stringToHslColor } from '../utils/mapUtils';
 import MapLabel from './MapLabel';
@@ -83,6 +85,7 @@ const MapComponent = ({
     children
 }) => {
     const map = useMap();
+    const queryClient = useQueryClient();
     const [labels, setLabels] = useState([]);
     const [hoveredRegionId, setHoveredRegionId] = useState(null);
     const [previewPano, setPreviewPano] = useState(null);
@@ -306,18 +309,24 @@ const MapComponent = ({
 
                 if (!pixel) return; // Safety check to prevent crash
 
-                // Check if we clicked on a Street View available location
-                svService.getPanorama({ location: clickedLatLng, radius: 50, source: google.maps.StreetViewSource.OUTDOOR }, (data, status) => {
-                    if (status === 'OK') {
+                // Check if we clicked on a Street View available location (using TanStack Query cache)
+                queryClient.fetchQuery({
+                    queryKey: ['streetview-availability', clickedLatLng.lat(), clickedLatLng.lng(), 50],
+                    queryFn: () => fetchStreetViewAvailability({ lat: clickedLatLng.lat(), lng: clickedLatLng.lng() }, 50),
+                    staleTime: 1000 * 60 * 60
+                }).then((data) => {
+                    if (data.available) {
                         setPreviewPano({
-                            address: data.location.description || 'Jalan Tidak Diketahui',
-                            position: data.location.latLng,
+                            address: data.description || 'Jalan Tidak Diketahui',
+                            position: data.latLng,
                             pixel: pixel,
-                            panoId: data.location.pano
+                            panoId: data.pano
                         });
                     } else {
                         setPreviewPano(null);
                     }
+                }).catch(() => {
+                    setPreviewPano(null);
                 });
             });
 
@@ -431,6 +440,8 @@ const MapComponent = ({
                         isActive={isActive}
                         onSelect={handleSelect}
                         isNewlyCreated={pin.id === newlyCreatedPinId}
+                        onStreetViewVisibilityChange={onStreetViewVisibilityChange}
+                        onStreetViewUpdate={onStreetViewUpdate}
                     />
                 );
             })}
@@ -463,6 +474,8 @@ const MapComponent = ({
                             details={isActive ? activeTicketDetails : null}
                             isLoadingDetails={isActive && isTicketDetailLoading}
                             errorDetails={isActive ? ticketDetailError : null}
+                            onStreetViewVisibilityChange={onStreetViewVisibilityChange}
+                            onStreetViewUpdate={onStreetViewUpdate}
                         />
                     );
                 }

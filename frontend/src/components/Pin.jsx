@@ -1,8 +1,11 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { AdvancedMarker, InfoWindow, useAdvancedMarkerRef, useMapsLibrary } from '@vis.gl/react-google-maps';
+import { AdvancedMarker, InfoWindow, useAdvancedMarkerRef, useMapsLibrary, useMap } from '@vis.gl/react-google-maps';
+import { useStreetViewAvailability } from '../hooks/useStreetViewAvailability';
 import Tooltip from './Tooltip';
 import MapMarkerIcon from './icons/MapMarkerIcon';
 import TrashIcon from './icons/TrashIcon';
+import StreetViewIcon from './icons/StreetViewIcon';
+import { useStreetViewMarker } from '../hooks/useStreetViewMarker';
 
 /**
  * Komponen terisolasi untuk mengedit judul.
@@ -10,6 +13,21 @@ import TrashIcon from './icons/TrashIcon';
  */
 const PinTitleEditor = ({ initialTitle, onSave }) => {
     const [titleInput, setTitleInput] = useState(initialTitle);
+    const inputRef = useRef(null);
+
+    useEffect(() => {
+        let timeoutId;
+        if (inputRef.current) {
+            timeoutId = setTimeout(() => {
+                if (inputRef.current) {
+                    inputRef.current.focus();
+                    const length = inputRef.current.value.length;
+                    inputRef.current.setSelectionRange(length, length);
+                }
+            }, 10); // Penundaan agar DOM InfoWindow dirender penuh
+        }
+        return () => clearTimeout(timeoutId);
+    }, []);
 
     const handleSaveClick = () => {
         const trimmedTitle = titleInput.trim();
@@ -17,20 +35,22 @@ const PinTitleEditor = ({ initialTitle, onSave }) => {
     };
 
     const handleKeyDown = (e) => {
+        e.stopPropagation(); // Mencegah Google Maps membajak event keyboard
         if (e.key === 'Enter') {
+            e.preventDefault();
             handleSaveClick();
         }
     };
 
     return (
-        <div className="flex items-center gap-2 w-full">
+        <div className="flex items-center gap-1.5 w-full min-h-[38px]">
             <input
+                ref={inputRef}
                 type="text"
                 value={titleInput}
                 onChange={(e) => setTitleInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="border px-2 py-1 rounded w-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                autoFocus
+                className="border border-blue-300 px-2 py-1 rounded w-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm min-w-0"
             />
             <Tooltip content="Simpan">
                 <button
@@ -62,7 +82,7 @@ const PinTitleEditor = ({ initialTitle, onSave }) => {
  * @param { boolean } props.isNewlyCreated - Bendera untuk menunjukkan apakah pin ini baru saja dibuat, untuk memicu animasi masuk.
  * @param { string } [props.actionType = 'copy'] - 'copy' untuk menyalin info, 'select' untuk mengirim postMessage.
  */
-const Pin = ({ pin, onDelete, onUpdateTitle, onUpdatePin, isActive, onSelect, isNewlyCreated, actionType = 'copy' }) => {
+const Pin = ({ pin, onDelete, onUpdateTitle, onUpdatePin, isActive, onSelect, isNewlyCreated, actionType = 'copy', onStreetViewVisibilityChange, onStreetViewUpdate }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [isActionSuccess, setIsActionSuccess] = useState(false);
     const [markerRef, marker] = useAdvancedMarkerRef();
@@ -72,6 +92,74 @@ const Pin = ({ pin, onDelete, onUpdateTitle, onUpdatePin, isActive, onSelect, is
     const [isLoadingAddress, setIsLoadingAddress] = useState(false);
     const geocodingLib = useMapsLibrary('geocoding');
     const hasSentCreatedMessage = useRef(false);
+    const map = useMap();
+    const [isEnteringSv, setIsEnteringSv] = useState(false);
+
+    // Cek ketersediaan Street View dengan TanStack Query
+    const { data: svAvailability, isLoading: isSvChecking } = useStreetViewAvailability(
+        { lat: pin.lat, lng: pin.lng },
+        50,
+        isActive
+    );
+
+    const isSvAvailable = svAvailability?.available;
+
+    const handleEnterStreetView = () => {
+        if (!map || !window.google || isSvAvailable === false || isEnteringSv) return;
+
+        setIsEnteringSv(true);
+        const sv = map.getStreetView();
+
+        // Gunakan data dari cache jika tersedia
+        if (svAvailability?.pano) {
+            if (onStreetViewUpdate) {
+                onStreetViewUpdate({
+                    address: svAvailability.description || 'Lokasi Terpilih',
+                    position: { lat: svAvailability.latLng.lat(), lng: svAvailability.latLng.lng() }
+                });
+            }
+            sv.setPano(svAvailability.pano);
+            sv.setVisible(true);
+            if (onStreetViewVisibilityChange) {
+                onStreetViewVisibilityChange(true);
+            }
+            setTimeout(() => setIsEnteringSv(false), 500);
+            return;
+        }
+
+        // Fallback jika tidak ada pano di cache (harusnya jarang terjadi karena hook sudah memvalidasi)
+        const svService = new google.maps.StreetViewService();
+        svService.getPanorama({
+            location: { lat: pin.lat, lng: pin.lng },
+            radius: 50,
+            source: google.maps.StreetViewSource.OUTDOOR
+        }, (data, status) => {
+            if (status === 'OK') {
+                if (onStreetViewUpdate) {
+                    onStreetViewUpdate({
+                        address: data.location.description || 'Lokasi Terpilih',
+                        position: { lat: data.location.latLng.lat(), lng: data.location.latLng.lng() }
+                    });
+                }
+                sv.setPano(data.location.pano);
+                sv.setVisible(true);
+                if (onStreetViewVisibilityChange) {
+                    onStreetViewVisibilityChange(true);
+                }
+                setTimeout(() => setIsEnteringSv(false), 500);
+            } else {
+                setIsEnteringSv(false);
+            }
+        });
+    };
+
+    // Render Pin di Street View
+    const { marker: svMarker, isVisible: isSvVisible } = useStreetViewMarker({
+        position: { lat: pin.lat, lng: pin.lng },
+        title: pin.title,
+        color: isActive ? '#dc2626' : '#ef4444',
+        onClick: onSelect
+    });
 
     // Efek untuk animasi masuk saat pin baru dibuat
     useEffect(() => {
@@ -217,27 +305,27 @@ const Pin = ({ pin, onDelete, onUpdateTitle, onUpdatePin, isActive, onSelect, is
             </AdvancedMarker>
             {isInfoWindowVisible && (
                 <InfoWindow
-                    anchor={marker}
+                    anchor={isSvVisible && svMarker ? svMarker : marker}
                     onCloseClick={onSelect}
                     disableAutoPan={true}
                 >
-                    <div className="p-0 font-sans relative w-[260px]">
+                    <div className="p-0 font-sans relative w-[260px] overflow-hidden transform-gpu" style={{ transform: 'translateZ(0)' }}>
                         {/* Header with Title and Close Button */}
-                        <div className="flex items-start justify-between p-3 pb-2">
-                            <div className="flex-1 pr-6">
+                        <div className="flex items-start justify-between p-3 pb-2 gap-2 w-full">
+                            <div className="flex-1 min-w-0">
                                 {isEditing ? (
                                     <PinTitleEditor
                                         initialTitle={pin.title}
                                         onSave={handleSaveTitle}
                                     />
                                 ) : (
-                                    <div className="group relative">
-                                        <h3 className="font-semibold text-gray-900 text-sm leading-tight pr-5" title={pin.title}>
+                                    <div className="group relative flex items-start min-h-[38px]">
+                                        <h3 className="font-semibold text-gray-900 text-sm leading-tight pr-6 line-clamp-2 break-words w-full" title={pin.title}>
                                             {pin.title}
                                         </h3>
                                         <button
                                             onClick={() => setIsEditing(true)}
-                                            className="absolute right-0 top-0 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 text-gray-400 hover:text-blue-600"
+                                            className="absolute right-0 opacity-0 group-hover:opacity-100 p-0.5 text-gray-400 hover:text-blue-600 bg-white rounded"
                                             title="Edit"
                                         >
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
@@ -357,10 +445,38 @@ const Pin = ({ pin, onDelete, onUpdateTitle, onUpdatePin, isActive, onSelect, is
                                         </>
                                     )}
                                 </button>
+
+                                {!isSvVisible && (
+                                    <Tooltip content={isSvAvailable === false ? "Street View Tidak Tersedia" : isSvChecking ? "Mengecek Street View..." : "Masuk Street View"}>
+                                        <button
+                                            onClick={handleEnterStreetView}
+                                            disabled={isSvAvailable === false || isSvChecking || isEnteringSv}
+                                            className={`flex items-center justify-center px-3 py-1.5 rounded text-xs font-medium transition-colors h-full ${isSvAvailable === false
+                                                ? 'text-gray-400 bg-gray-50 border border-gray-200 cursor-not-allowed'
+                                                : isSvChecking || isEnteringSv
+                                                    ? 'text-gray-400 bg-gray-50 border border-gray-100 cursor-wait'
+                                                    : 'text-green-600 bg-green-50 hover:bg-green-100 border border-green-100'
+                                                }`}
+                                        >
+                                            {isEnteringSv ? (
+                                                <div className="w-5 h-5 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                                            ) : isSvChecking ? (
+                                                <div className="flex gap-1 items-center justify-center w-5 h-5">
+                                                    <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                                                    <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                                                    <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"></div>
+                                                </div>
+                                            ) : (
+                                                <StreetViewIcon className="w-5 h-5" disabled={isSvAvailable === false} />
+                                            )}
+                                        </button>
+                                    </Tooltip>
+                                )}
+
                                 <Tooltip content="Hapus Pin">
                                     <button
                                         onClick={handleDelete}
-                                        className="flex items-center justify-center px-3 py-1.5 rounded text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 border border-red-100 transition-colors"
+                                        className="flex items-center justify-center px-3 py-1.5 rounded text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 border border-red-100 transition-colors h-full"
                                     >
                                         <TrashIcon className="w-4 h-4" />
                                     </button>

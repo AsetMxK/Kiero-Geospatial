@@ -82,6 +82,7 @@ const IframeFullMapPage = () => {
     const [fabPosition, setFabPosition] = useState(null);
     const mapContainerRef = useRef(null);
     const pannedTicketId = useRef(null);
+    const pannedPinId = useRef(null);
     const [mapViewport, setMapViewport] = useState(null);
     const [isAuthenticating, setIsAuthenticating] = useState(true);
     const [phoneNumberToSearch, setPhoneNumberToSearch] = useState(null);
@@ -347,10 +348,23 @@ const IframeFullMapPage = () => {
         }
     }, [activeTicketId, mapData]);
 
+    useEffect(() => {
+        if (activePinId && activePinId !== pannedPinId.current) {
+            const activePin = pins.find(p => p.id === activePinId);
+            if (activePin) {
+                setPanToTarget({ lat: activePin.lat, lng: activePin.lng });
+                pannedPinId.current = activePinId;
+            }
+        } else if (!activePinId) {
+            pannedPinId.current = null;
+        }
+    }, [activePinId, pins]);
+
     const handleActivePinChange = useCallback((pinId) => {
         setActivePinId(pinId);
         if (pinId) {
             setActiveTicketId(null);
+            setFabPosition(null);
         }
     }, []);
 
@@ -358,6 +372,7 @@ const IframeFullMapPage = () => {
         setActiveTicketId(ticketId);
         if (ticketId) {
             setActivePinId(null);
+            setFabPosition(null);
         }
     }, []);
 
