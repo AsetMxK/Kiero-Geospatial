@@ -2,9 +2,6 @@ import { Routes, Route, Link } from 'react-router-dom';
 import { Tooltip as GlobalTooltip } from 'react-tooltip';
 import 'react-tooltip/dist/react-tooltip.css';
 import MapPage from './pages/MapPage';
-import SharePage from './pages/SharePage';
-import IframeMapPage from './pages/IframeMapPage';
-import IframeMapPageClientAuth from './pages/IframeMapPageClientAuth';
 import IframeFullMapPage from './pages/IframeFullMapPage';
 import GlobalErrorHandler from './components/GlobalErrorHandler';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -48,9 +45,6 @@ const App = () => {
             <ErrorBoundary>
                 <Routes>
                     <Route path="/" element={<MapPage />} />
-                    <Route path="/share" element={<SharePage />} />
-                    <Route path="/map-iframe" element={<IframeMapPage />} />
-                    <Route path="/map-iframe-client" element={<IframeMapPageClientAuth />} />
                     <Route path="/map-iframe-full" element={<IframeFullMapPage />} />
                     <Route path="*" element={<NotFound />} />
                 </Routes>
