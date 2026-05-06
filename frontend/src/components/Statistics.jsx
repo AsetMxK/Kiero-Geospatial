@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useRegionStats } from '../hooks/useRegionStats';
 import { getStatusColorHsl } from '../utils/statusColors';
-import ChartBarIcon from './icons/ChartBarIcon';
+import { Table } from 'lucide-react';
 import StatisticsCanvas from './StatisticsCanvas';
 
 /**
@@ -64,7 +64,7 @@ const Statistics = ({ regionCode, dateRange }) => {
                             : 'bg-teal-500 hover:bg-teal-600 focus:ring-teal-500'}
                         `}
                 >
-                    <ChartBarIcon className="w-5 h-5" />
+                    <Table size={20} />
                     <span>{isDetailsVisible ? 'Sembunyikan Detail Visual' : 'Lihat Detail Visual'}</span>
                 </button>
             </div>

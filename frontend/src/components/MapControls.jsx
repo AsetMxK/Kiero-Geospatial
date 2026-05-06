@@ -1,9 +1,5 @@
 import Tooltip from './Tooltip';
-import MaximizeIcon from './icons/MaximizeIcon';
-import MinimizeIcon from './icons/MinimizeIcon';
-import PinIcon from './icons/PinIcon';
-import BackIcon from './icons/BackIcon';
-import { Locate } from 'lucide-react';
+import { Locate, ArrowLeft, MapPin, Maximize, Minimize } from 'lucide-react';
 
 /**
  * Komponen yang me-render kontrol mengambang di atas peta.
@@ -46,7 +42,7 @@ const MapControls = ({
             }
           `}
         >
-          {isFullscreen ? <MinimizeIcon /> : <MaximizeIcon />}
+          {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
         </button>
       </Tooltip>
 
@@ -62,7 +58,7 @@ const MapControls = ({
             }
           `}
         >
-          <PinIcon />
+          <MapPin size={20} />
         </button>
       </Tooltip>
 
@@ -82,7 +78,7 @@ const MapControls = ({
           disabled={isBackDisabled}
           className="bg-white p-2 rounded-full shadow-lg hover:shadow-xl hover:bg-gray-50 text-gray-600 hover:text-gray-900 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center"
         >
-          <BackIcon />
+          <ArrowLeft size={20} />
         </button>
       </Tooltip>
     </div>

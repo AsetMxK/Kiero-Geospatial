@@ -11,8 +11,7 @@ import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import CustomSelectDropdown from './CustomSelectDropdown';
 import DateRangePicker from './DateRangePicker';
-import KategoriIcon from './icons/KategoriIcon';
-import CalendarIcon from './icons/CalendarIcon';
+import { CalendarRange, LayoutGrid } from 'lucide-react';
 
 /**
  * Komponen yang me-render satu set "pil" filter (tombol) untuk kategori dan rentang tanggal.
@@ -118,7 +117,7 @@ const FilterPills = ({
                         }
                     `}
                 >
-                    <KategoriIcon className="w-3.5 h-3.5" />
+                    <LayoutGrid size={14} />
                     <span>{selectedCategory ? (categories.find(c => c.id === selectedCategory)?.category_name || 'Kategori Terpilih') : 'Semua Kategori'}</span>
                 </button>
                 <FloatingPortal>
@@ -158,7 +157,7 @@ const FilterPills = ({
                         }
                      `}
                 >
-                    <CalendarIcon className="w-3.5 h-3.5" />
+                    <CalendarRange size={14} />
                     <span>{isDateDefault ? '30 Hari Terakhir' : formattedDateRange}</span>
                 </button>
                 <FloatingPortal>

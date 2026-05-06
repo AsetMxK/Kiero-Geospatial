@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { X } from 'lucide-react';
 import { Map, useMap } from '@vis.gl/react-google-maps';
 import { useQueryClient } from '@tanstack/react-query';
 import { fetchStreetViewAvailability } from '../hooks/useStreetViewAvailability';
@@ -328,7 +329,7 @@ const MapComponent = ({
                 // Check if we clicked on a Street View available location (using TanStack Query cache)
                 queryClient.fetchQuery({
                     queryKey: ['streetview-availability', clickedLatLng.lat(), clickedLatLng.lng(), 50],
-                    queryFn: () => fetchStreetViewAvailability({ lat: clickedLatLng.lat(), lng: clickedLatLng.lng() }, 50),
+                    queryFn: () => fetchStreetViewAvailability({ lat: clickedLatLng.lat(), lng: clickedLatLng.lng() }, 100),
                     staleTime: 1000 * 60 * 60
                 }).then((data) => {
                     if (data.available) {
@@ -528,9 +529,7 @@ const MapComponent = ({
                             }}
                             className="absolute -top-2 -right-2 bg-white rounded-full p-1 shadow-md border border-gray-200 hover:bg-gray-100 z-10"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                            </svg>
+                            <X size={12} className="text-gray-500" />
                         </button>
 
                         {/* Image */}

@@ -1,6 +1,5 @@
 import React from 'react';
-import InfoIcon from './icons/InfoIcon';
-import SitemapIcon from './icons/SitemapIcon';
+import { Info, Proportions } from 'lucide-react';
 import Tooltip from './Tooltip';
 
 /**
@@ -22,7 +21,7 @@ const FloatingActionButtons = ({ onShowInfo, onShowSubRegions, canDrillDown }) =
           onClick={onShowInfo}
           className="bg-gray-50 p-2.5 rounded-full hover:bg-blue-50 hover:text-blue-600 transition-colors duration-200 flex items-center justify-center text-gray-600"
         >
-          <InfoIcon />
+          <Info size={20} />
         </button>
       </Tooltip>
       {canDrillDown && (
@@ -31,7 +30,7 @@ const FloatingActionButtons = ({ onShowInfo, onShowSubRegions, canDrillDown }) =
             onClick={onShowSubRegions}
             className="bg-gray-50 p-2.5 rounded-full hover:bg-blue-50 hover:text-blue-600 transition-colors duration-200 flex items-center justify-center text-gray-600"
           >
-            <SitemapIcon />
+            <Proportions size={20} />
           </button>
         </Tooltip>
       )}

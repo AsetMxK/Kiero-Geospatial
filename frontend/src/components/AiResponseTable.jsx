@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import AiMarkdownRenderer from './AiMarkdownRenderer';
-import { Search, ArrowUpDown, X, List, Expand, FileQuestion } from 'lucide-react';
+import { Search, ArrowUpDown, X, Expand, FileQuestion, Table, SearchX } from 'lucide-react';
 
 import Fuse from 'fuse.js';
 
@@ -127,7 +127,7 @@ const AiDataTableModal = ({ isOpen, onClose, data, columns, formatHeader, cleanS
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50/50">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-blue-100 rounded-lg">
-                            <List className="w-5 h-5 text-blue-700" />
+                            <Table className="w-5 h-5 text-blue-700" />
                         </div>
                         <div>
                             <h3 className="font-semibold text-gray-800 text-base">Detail Tabel Data</h3>
@@ -147,7 +147,7 @@ const AiDataTableModal = ({ isOpen, onClose, data, columns, formatHeader, cleanS
                             />
                             {inputValue && (
                                 <button onClick={() => setInputValue('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
-                                    <X className="w-3.5 h-3.5" />
+                                    <SearchX className="w-3.5 h-3.5" />
                                 </button>
                             )}
                         </div>
@@ -166,14 +166,14 @@ const AiDataTableModal = ({ isOpen, onClose, data, columns, formatHeader, cleanS
                         <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 group-focus-within:text-blue-500 transition-colors" />
                         <input
                             type="text"
-                            placeholder="Pencarian cerdas (fuzzy)..."
+                            placeholder="Cari data..."
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
                             className="pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white shadow-sm w-full transition-all"
                         />
                         {inputValue && (
                             <button onClick={() => setInputValue('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
-                                <X className="w-3.5 h-3.5" />
+                                <SearchX className="w-3.5 h-3.5" />
                             </button>
                         )}
                     </div>
@@ -336,9 +336,7 @@ const AiResponseTable = ({ analysis_summary, data }) => {
                     {/* Dinamis Footer */}
                     <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100/60">
                         <div className="px-1 text-[11px] text-gray-400 flex items-center gap-1.5 whitespace-nowrap">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5 opacity-70">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 0 1-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125m-9.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-7.5A1.125 1.125 0 0 1 12 18.375m9.75-12.75c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125m19.5 0v1.5c0 .621-.504 1.125-1.125 1.125M2.25 5.625v1.5c0 .621.504 1.125 1.125 1.125m0 0h17.25m-17.25 0h7.5c.621 0 1.125.504 1.125 1.125M3.375 8.25c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m17.25-3.75h-7.5c-.621 0-1.125.504-1.125 1.125m8.625-1.125c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125m-17.25 0h7.5m-7.5 0c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125M12 10.875v-1.5m0 1.5c0 .621-.504 1.125-1.125 1.125M12 10.875c0 .621.504 1.125 1.125 1.125m-2.25 0c.621 0 1.125.504 1.125 1.125M13.125 12h7.5m-7.5 0c-.621 0-1.125.504-1.125 1.125M20.625 12c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125m-17.25 0h7.5M12 14.625v-1.5m0 1.5c0 .621-.504 1.125-1.125 1.125M12 14.625c0 .621.504 1.125 1.125 1.125m-2.25 0c.621 0 1.125.504 1.125 1.125m0 1.5v-1.5m0 0c0-.621.504-1.125 1.125-1.125m0 0h7.5" />
-                            </svg>
+                            <Table size={14} className="opacity-70" />
                             <span>
                                 {isLargeData
                                     ? `Cuplikan sebagian data (Total ${data.length} baris)`

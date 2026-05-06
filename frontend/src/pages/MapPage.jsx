@@ -13,6 +13,7 @@ import MapLayerControl from '../components/MapLayerControl';
 import LoadingOverlay from '../components/LoadingOverlay';
 import ErrorModal from '../components/ErrorModal';
 import OffscreenIndicatorsLayer from '../components/OffscreenIndicatorsLayer';
+import { MapPinPlus, Reply } from 'lucide-react';
 import Tooltip from '../components/Tooltip';
 import { useBoundaryData } from '../hooks/useBoundaryData';
 import { useTicketsData, useTicketDetails } from '../hooks/useTicketsData';
@@ -1134,9 +1135,7 @@ const MapPage = () => {
                                     }}
                                     className="p-2 hover:bg-white/10 rounded-full transition-colors"
                                 >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                                    </svg>
+                                    <Reply className="h-5 w-5" />
                                 </button>
                             </Tooltip>
                             <div className="flex flex-col min-w-0">
@@ -1149,9 +1148,7 @@ const MapPage = () => {
                                     onClick={handlePinStreetViewLocation}
                                     className="p-2 hover:bg-white/10 rounded-full transition-colors text-blue-400 hover:text-blue-300"
                                 >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                                    </svg>
+                                    <MapPinPlus className="h-5 w-5" />
                                 </button>
                             </Tooltip>
                         </div>

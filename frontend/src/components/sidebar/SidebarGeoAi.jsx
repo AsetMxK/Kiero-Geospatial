@@ -2,10 +2,9 @@ import React, { useRef, useEffect, useCallback } from 'react';
 import AiResponseTable from '../AiResponseTable';
 import AiMarkdownRenderer from '../AiMarkdownRenderer';
 import { useGeoAi } from '../../hooks/useGeoAi';
-import TrashIcon from '../icons/TrashIcon';
+import { ThumbsUp, ThumbsDown, CheckCircle2, MessageSquare, History, PlusSquare, Send, Trash2 } from 'lucide-react';
 import Tooltip from '../Tooltip';
 import { cleanRegionName } from '../../utils/mapUtils';
-import { ThumbsUp, ThumbsDown, CheckCircle2, MessageSquare, History, PlusSquare, Send } from 'lucide-react';
 
 const AiMessageFeedback = ({ messageId, requestId, hasFeedback, savedRating, onSubmit }) => {
     const [selectedRating, setSelectedRating] = React.useState(null);
@@ -282,7 +281,7 @@ const SidebarGeoAi = ({ isMobile, onRegionAutoSelect }) => {
                                             }}
                                             className="text-gray-400 hover:text-red-500 p-1 -mt-1 -mr-1 rounded-full hover:bg-red-50 transition-colors"
                                         >
-                                            <TrashIcon className="w-4 h-4" />
+                                            <Trash2 size={16} />
                                         </button>
                                     </Tooltip>
                                 </div>
@@ -305,17 +304,6 @@ const SidebarGeoAi = ({ isMobile, onRegionAutoSelect }) => {
                             <p className="text-sm text-gray-500 max-w-xs mx-auto">
                                 Tanya apa saja tentang data wilayah.
                             </p>
-                            <div className="mt-5 flex flex-wrap justify-center gap-2">
-                                {['Cari wilayah', 'Statistik provinsi', 'Info lokasi'].map((suggestion, idx) => (
-                                    <button
-                                        key={idx}
-                                        onClick={() => setAiInput(suggestion)}
-                                        className="px-3.5 py-1.5 text-xs font-medium bg-white border border-gray-200 rounded-full text-gray-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 hover:shadow-sm transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
-                                    >
-                                        {suggestion}
-                                    </button>
-                                ))}
-                            </div>
                         </div>
                     ) : (
                         aiMessages.map((msg, idx) => {

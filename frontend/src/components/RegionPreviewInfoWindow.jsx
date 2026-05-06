@@ -1,6 +1,6 @@
 import React from 'react';
 import { InfoWindow } from '@vis.gl/react-google-maps';
-import NavigationIcon from './icons/NavigationIcon';
+import { Navigation, X } from 'lucide-react';
 import { TICKET_STATUSES } from '../constants/ticketStatus';
 import Tooltip from './Tooltip';
 
@@ -91,11 +91,9 @@ const RegionPreviewInfoWindow = ({
           <Tooltip content="Tutup">
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors absolute right-2 top-2"
+              className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-              </svg>
+              <X size={16} />
             </button>
           </Tooltip>
         </div>
@@ -113,7 +111,7 @@ const RegionPreviewInfoWindow = ({
               onClick={onNavigate}
               className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-blue-600 text-white border border-transparent hover:bg-blue-700 shadow-sm hover:shadow transition-colors duration-200"
             >
-              <NavigationIcon className="w-3.5 h-3.5" />
+              <Navigation size={14} />
               Lihat Detail Wilayah
             </button>
             <p className="text-[10px] text-gray-400 mt-2 text-center italic">

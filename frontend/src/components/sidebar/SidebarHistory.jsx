@@ -1,7 +1,6 @@
 import React from 'react';
 import Tooltip from '../Tooltip';
-import GoToIcon from '../icons/GoToIcon';
-import TrashIcon from '../icons/TrashIcon';
+import { Trash2, Locate } from 'lucide-react';
 
 const SidebarHistory = ({
     isMobile,
@@ -35,7 +34,7 @@ const SidebarHistory = ({
                                     onClick={() => onGoToPin(pin)}
                                     className="text-xs inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 font-medium rounded-md hover:bg-blue-100"
                                 >
-                                    <GoToIcon className="w-3.5 h-3.5" />
+                                    <Locate size={14} />
                                     Lihat di Peta
                                 </button>
                                 <Tooltip content='Hapus Pin' >
@@ -47,7 +46,7 @@ const SidebarHistory = ({
                                         className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full"
                                         aria-label={`Hapus ${pin.title}`}
                                     >
-                                        <TrashIcon className="w-4 h-4" />
+                                        <Trash2 size={16} />
                                     </button>
                                 </Tooltip>
                             </div>

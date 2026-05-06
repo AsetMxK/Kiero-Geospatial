@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
-export const fetchStreetViewAvailability = async (position, radius = 50) => {
+export const fetchStreetViewAvailability = async (position, radius = 100) => {
     if (!position || !position.lat || !position.lng || !window.google) {
         throw new Error('Invalid position or Google Maps not loaded');
     }
@@ -32,11 +32,11 @@ export const fetchStreetViewAvailability = async (position, radius = 50) => {
 /**
  * Hook untuk mengecek ketersediaan Street View di lokasi tertentu dengan caching TanStack Query.
  * @param {object} position - Koordinat {lat, lng}
- * @param {number} radius - Radius pencarian dalam meter (default 50)
+ * @param {number} radius - Radius pencarian dalam meter (default 100)
  * @param {boolean} enabled - Apakah query aktif atau tidak
  * @returns {object} Query result object (data, isLoading, status, etc)
  */
-export function useStreetViewAvailability(position, radius = 50, enabled = true) {
+export function useStreetViewAvailability(position, radius = 100, enabled = true) {
     return useQuery({
         queryKey: ['streetview-availability', position?.lat, position?.lng, radius],
         queryFn: () => fetchStreetViewAvailability(position, radius),

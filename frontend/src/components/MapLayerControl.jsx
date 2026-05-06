@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useMap } from '@vis.gl/react-google-maps';
-import LayerIcon from './icons/LayerIcon';
+import { Layers, Road } from 'lucide-react';
 
 const MapLayerControl = ({ mapLayer, onMapLayerChange, isStreetViewVisible, onStreetViewVisibilityChange, style, isMobile }) => {
     const map = useMap();
@@ -118,7 +118,7 @@ const MapLayerControl = ({ mapLayer, onMapLayerChange, isStreetViewVisible, onSt
                     <div className={`absolute bottom-1 left-0 right-0 flex items-center justify-center gap-1 transition-opacity duration-200 ${isHovered ? 'opacity-0' : 'opacity-100'}`}>
                         <div className="p-0.5">
                             {/* Reduced icon size to w-2.5 h-2.5 */}
-                            <LayerIcon className={`w-4 h-4 ${mapLayer === 'satellite' ? 'text-white' : 'text-gray-900'}`} />
+                            <Layers size={16} className={mapLayer === 'satellite' ? 'text-white' : 'text-gray-900'} />
                         </div>
                         {/* Text color logic: Map -> Black, Satellite -> White */}
                         <span className={`text-[10px] font-medium ${mapLayer === 'default' ? 'text-gray-900 drop-shadow-sm' : 'text-white drop-shadow-md'}`}>
@@ -188,7 +188,7 @@ const MapLayerControl = ({ mapLayer, onMapLayerChange, isStreetViewVisible, onSt
                             ${isStreetViewVisible ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200' : 'text-gray-700 hover:bg-gray-50'}
                         `}
                     >
-                        <span className="text-lg">🚶</span>
+                        <Road size={20} />
                         Street View
                     </button>
                 </div>

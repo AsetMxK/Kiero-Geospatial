@@ -1,4 +1,4 @@
-import ChevronIcon from './icons/ChevronIcon';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Tooltip from './Tooltip';
 
 /**
@@ -44,7 +44,11 @@ const SidebarToggleButton = ({ isOpen, onClick, position = 'left' }) => {
                         text-gray-400 hover:text-blue-600 transition-all duration-200
                     `}
                 >
-                    <ChevronIcon isOpen={isOpen} />
+                    {position === 'left' ? (
+                        isOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />
+                    ) : (
+                        isOpen ? <ChevronRight size={20} /> : <ChevronLeft size={20} />
+                    )}
                 </div>
             </Tooltip>
         </div>

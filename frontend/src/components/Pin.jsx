@@ -3,7 +3,7 @@ import { AdvancedMarker, InfoWindow, useAdvancedMarkerRef, useMapsLibrary, useMa
 import { useStreetViewAvailability } from '../hooks/useStreetViewAvailability';
 import Tooltip from './Tooltip';
 import MapMarkerIcon from './icons/MapMarkerIcon';
-import TrashIcon from './icons/TrashIcon';
+import { Trash2, Copy, CopyCheck, Check, MapPin, X, LocateFixed, Pencil } from 'lucide-react';
 import StreetViewIcon from './icons/StreetViewIcon';
 import { useStreetViewMarker } from '../hooks/useStreetViewMarker';
 
@@ -57,9 +57,7 @@ const PinTitleEditor = ({ initialTitle, onSave }) => {
                     onClick={handleSaveClick}
                     className="p-1.5 bg-green-50 text-green-600 rounded hover:bg-green-100 hover:text-green-700 transition-colors flex-shrink-0"
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
+                    <Check size={16} />
                 </button>
             </Tooltip>
         </div>
@@ -98,7 +96,7 @@ const Pin = ({ pin, onDelete, onUpdateTitle, onUpdatePin, isActive, onSelect, is
     // Cek ketersediaan Street View dengan TanStack Query
     const { data: svAvailability, isLoading: isSvChecking } = useStreetViewAvailability(
         { lat: pin.lat, lng: pin.lng },
-        50,
+        100,
         isActive
     );
 
@@ -285,13 +283,6 @@ const Pin = ({ pin, onDelete, onUpdateTitle, onUpdatePin, isActive, onSelect, is
         setIsEditing(false);
     }, [pin.id, onUpdateTitle]);
 
-    const getButtonText = () => {
-        if (actionType === 'select') {
-            return isActionSuccess ? 'Terpilih!' : 'Pilih';
-        }
-        return isActionSuccess ? 'Tersalin!' : 'Salin';
-    };
-
     return (
         <>
             <AdvancedMarker
@@ -330,18 +321,13 @@ const Pin = ({ pin, onDelete, onUpdateTitle, onUpdatePin, isActive, onSelect, is
                                             className="absolute right-0 opacity-0 group-hover:opacity-100 p-0.5 text-gray-400 hover:text-blue-600 bg-white rounded"
                                             title="Edit"
                                         >
-                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
-                                                <path d="M5.433 13.917l1.262-3.155A4 4 0 017.58 9.42l6.92-6.918a2.121 2.121 0 013 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 01-.65-.65z" />
-                                                <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0010 3H4.75A2.75 2.75 0 002 5.75v9.5A2.75 2.75 0 004.75 18h9.5A2.75 2.75 0 0017 15.25V10a.75.75 0 00-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5z" />
-                                            </svg>
+                                            <Pencil size={14} />
                                         </button>
                                     </div>
                                 )}
                                 {/* Compact Coordinates */}
                                 <div className="flex items-center gap-1 text-[10px] text-gray-500 mt-0.5">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3 opacity-60">
-                                        <path fillRule="evenodd" d="M9.69 18.933l.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 00.281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 103 9c0 3.492 1.698 5.988 3.355 7.584a13.731 13.731 0 002.273 1.765 11.842 11.842 0 00.976.544l.062.029.006.003.002.001.003.001a.75.75 0 00.01-.003zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                                    </svg>
+                                    <LocateFixed size={12} className="opacity-60" />
                                     <span>{pin.lat.toFixed(6)}, {pin.lng.toFixed(6)}</span>
                                 </div>
                             </div>
@@ -350,9 +336,7 @@ const Pin = ({ pin, onDelete, onUpdateTitle, onUpdatePin, isActive, onSelect, is
                                     onClick={onSelect}
                                     className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors"
                                 >
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                                        <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-                                    </svg>
+                                    <X size={16} />
                                 </button>
                             </Tooltip>
                         </div>
@@ -363,7 +347,11 @@ const Pin = ({ pin, onDelete, onUpdateTitle, onUpdatePin, isActive, onSelect, is
                             {/* Admin Info - Compact Card Style */}
                             {pin.isLoadingAdminInfo ? (
                                 <div className="flex items-center gap-2 text-xs text-gray-500 py-2">
-                                    <div className="w-3 h-3 border-2 border-dashed rounded-full animate-spin border-gray-400"></div>
+                                    <div className="flex gap-1 h-3 items-center">
+                                        <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                                        <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                                        <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"></div>
+                                    </div>
                                     <span>Memuat info wilayah...</span>
                                 </div>
                             ) : pin.adminInfo && pin.adminInfo.provinsi ? (
@@ -402,14 +390,16 @@ const Pin = ({ pin, onDelete, onUpdateTitle, onUpdatePin, isActive, onSelect, is
                             {/* Address Section */}
                             {isLoadingAddress ? (
                                 <div className="flex items-center gap-2 text-xs text-gray-500">
-                                    <div className="w-3 h-3 border-2 border-dashed rounded-full animate-spin border-gray-400"></div>
+                                    <div className="flex gap-1 h-3 items-center">
+                                        <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                                        <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                                        <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"></div>
+                                    </div>
                                     <span>Mencari alamat...</span>
                                 </div>
                             ) : address && (
                                 <div className="flex gap-2 items-start text-xs text-gray-600">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 mt-0.5 text-gray-400 flex-shrink-0">
-                                        <path fillRule="evenodd" d="M9.69 18.933l.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 00.281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 103 9c0 3.492 1.698 5.988 3.355 7.584a13.731 13.731 0 002.273 1.765 11.842 11.842 0 00.976.544l.062.029.006.003.002.001.003.001a.75.75 0 00.01-.003zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                                    </svg>
+                                    <MapPin size={14} className="mt-0.5 text-gray-400 flex-shrink-0" />
                                     <span className="break-words leading-relaxed">{address}</span>
                                 </div>
                             )}
@@ -426,22 +416,15 @@ const Pin = ({ pin, onDelete, onUpdateTitle, onUpdatePin, isActive, onSelect, is
                                 >
                                     {isActionSuccess ? (
                                         <>
-                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
-                                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                            </svg>
+                                            {actionType === 'select' ? <Check size={12} /> : <CopyCheck size={12} />}
                                             {actionType === 'select' ? 'Terpilih' : 'Tersalin'}
                                         </>
                                     ) : (
                                         <>
                                             {actionType === 'select' ? (
-                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
-                                                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
-                                                </svg>
+                                                <Check size={12} />
                                             ) : (
-                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
-                                                    <path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0117 6.622V12.5a1.5 1.5 0 01-1.5 1.5h-1v-3.379a3 3 0 00-.879-2.121L10.5 5.379A3 3 0 008.379 4.5H7v-1z" />
-                                                    <path d="M4.5 6A1.5 1.5 0 003 7.5v9A1.5 1.5 0 004.5 18h7a1.5 1.5 0 001.5-1.5v-5.879a1.5 1.5 0 00-.44-1.06L9.44 6.439A1.5 1.5 0 008.378 6H4.5z" />
-                                                </svg>
+                                                <Copy size={12} />
                                             )}
                                             {actionType === 'select' ? 'Pilih' : 'Salin'}
                                         </>
@@ -480,7 +463,7 @@ const Pin = ({ pin, onDelete, onUpdateTitle, onUpdatePin, isActive, onSelect, is
                                         onClick={handleDelete}
                                         className="flex items-center justify-center px-3 py-1.5 rounded text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 border border-red-100 transition-colors h-full"
                                     >
-                                        <TrashIcon className="w-4 h-4" />
+                                        <Trash2 size={16} />
                                     </button>
                                 </Tooltip>
                             </div>

@@ -1,18 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import Tooltip from './Tooltip';
+import { Search, Check, ChevronDown, SearchX } from 'lucide-react';
 
-/**
- * Komponen ikon chevron bawah sederhana.
- *
- * @param {object} props - Properti komponen.
- * @param {boolean} props.disabled - Apakah ikon harus ditampilkan dalam keadaan nonaktif.
- * @returns {JSX.Element} Elemen SVG untuk ikon chevron.
- */
-const ChevronDownIcon = ({ disabled }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={`w-4 h-4 transition-colors ${disabled ? 'text-gray-300' : 'text-gray-400 group-hover:text-gray-600'}`}>
-        <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
-    </svg>
-);
+
 
 /**
  * Komponen dropdown pilihan kustom yang aksesibel dan dapat ditata.
@@ -169,7 +159,7 @@ const CustomSelectDropdown = ({ label, placeholder, disabled = false, options = 
                         </span>
 
                         <span className={`[grid-area:1/1] justify-self-end transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
-                            <ChevronDownIcon disabled={disabled} />
+                            <ChevronDown className={`w-4 h-4 transition-colors ${disabled ? 'text-gray-300' : 'text-gray-400 group-hover:text-gray-600'}`} />
                         </span>
                     </button>
                 </Tooltip>
@@ -180,20 +170,31 @@ const CustomSelectDropdown = ({ label, placeholder, disabled = false, options = 
                         <div className="p-2 border-b border-gray-100 bg-gray-50/50 sticky top-0">
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
-                                    <svg className="h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clipRule="evenodd" />
-                                    </svg>
+                                    <Search className="h-4 w-4 text-gray-400" />
                                 </div>
                                 <input
                                     ref={searchInputRef}
                                     type="text"
-                                    className="block w-full pl-8 pr-2 py-1 border border-gray-200 rounded-md leading-5 bg-white placeholder-gray-400 focus:outline-none focus:placeholder-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-xs transition-colors"
+                                    className="block w-full pl-8 pr-8 py-1 border border-gray-200 rounded-md leading-5 bg-white placeholder-gray-400 focus:outline-none focus:placeholder-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-xs transition-colors"
                                     placeholder="Cari..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     onClick={(e) => e.stopPropagation()}
                                     onKeyDown={handleKeyDown}
                                 />
+                                {searchQuery && (
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSearchQuery('');
+                                            searchInputRef.current?.focus();
+                                        }}
+                                        className="absolute inset-y-0 right-0 pr-2 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                                    >
+                                        <SearchX size={14} />
+                                    </button>
+                                )}
                             </div>
                         </div>
 
@@ -246,9 +247,7 @@ const CustomSelectDropdown = ({ label, placeholder, disabled = false, options = 
                                                 <span className="min-w-0 break-words">{mainText}</span>
                                                 {isSelected && (
                                                     <span className="absolute right-3 inset-y-0 flex items-center text-blue-600">
-                                                        <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                                        </svg>
+                                                        <Check className="h-4 w-4" />
                                                     </span>
                                                 )}
                                             </div>
