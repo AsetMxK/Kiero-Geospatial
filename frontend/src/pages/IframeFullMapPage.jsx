@@ -66,6 +66,8 @@ const IframeFullMapPage = () => {
     const [loadingText, setLoadingText] = useState('Memuat data peta...');
     const navigationHistory = useRef([{ selection: {}, viewMode: 'drill-down' }]);
     const [isPinningMode, setIsPinningMode] = useState(false);
+    const [locateTrigger, setLocateTrigger] = useState(0);
+    const [isViewCentered, setIsViewCentered] = useState(true);
     const [isBoundaryTransparent, setIsBoundaryTransparent] = useState(false);
     const [pins, setPins] = useState(getPinHistory);
     const [activePinId, setActivePinId] = useState(() => {
@@ -156,6 +158,7 @@ const IframeFullMapPage = () => {
         }
 
         setCurrentSelection(newSelection);
+        setIsViewCentered(true);
         setFabPosition(null);
     }, [provinsiData, kabkotaData, kecamatanData, kabkotaLoading, kecamatanLoading, desaLoading]);
 
@@ -340,11 +343,11 @@ const IframeFullMapPage = () => {
         if (activeTicketId && activeTicketId !== pannedTicketId.current) {
             const activeTicket = mapData.find(t => t.id === activeTicketId);
             if (activeTicket) {
-                setPanToTarget({ 
-                    lat: activeTicket.coordinates.lat, 
-                    lng: activeTicket.coordinates.lng, 
+                setPanToTarget({
+                    lat: activeTicket.coordinates.lat,
+                    lng: activeTicket.coordinates.lng,
                     zoom: 15,
-                    verticalOffset: 150 
+                    verticalOffset: 150
                 });
                 pannedTicketId.current = activeTicketId;
             }
@@ -357,10 +360,10 @@ const IframeFullMapPage = () => {
         if (activePinId && activePinId !== pannedPinId.current) {
             const activePin = pins.find(p => p.id === activePinId);
             if (activePin) {
-                setPanToTarget({ 
-                    lat: activePin.lat, 
+                setPanToTarget({
+                    lat: activePin.lat,
                     lng: activePin.lng,
-                    verticalOffset: 150 
+                    verticalOffset: 150
                 });
                 pannedPinId.current = activePinId;
             }
@@ -478,11 +481,11 @@ const IframeFullMapPage = () => {
             }
 
             setActivePinId(targetPin.id);
-            setPanToTarget({ 
-                lat: targetPin.lat, 
-                lng: targetPin.lng, 
+            setPanToTarget({
+                lat: targetPin.lat,
+                lng: targetPin.lng,
                 zoom: 15,
-                verticalOffset: 150 
+                verticalOffset: 150
             });
 
             params.delete('share_lat');
@@ -901,11 +904,11 @@ const IframeFullMapPage = () => {
         setPins(prevPins => [...prevPins, newPinWithId].slice(-5));
         setActivePinId(newPinWithId.id);
         setNewlyCreatedPinId(newPinWithId.id);
-        setPanToTarget({ 
-            lat: newPinWithId.lat, 
-            lng: newPinWithId.lng, 
+        setPanToTarget({
+            lat: newPinWithId.lat,
+            lng: newPinWithId.lng,
             zoom: 15,
-            verticalOffset: 150 
+            verticalOffset: 150
         });
     }, []);
 
@@ -935,11 +938,11 @@ const IframeFullMapPage = () => {
 
     const handleGoToPin = (pin) => {
         setActivePinId(pin.id);
-        setPanToTarget({ 
-            lat: pin.lat, 
-            lng: pin.lng, 
+        setPanToTarget({
+            lat: pin.lat,
+            lng: pin.lng,
             zoom: 15,
-            verticalOffset: 150 
+            verticalOffset: 150
         });
         setActiveSidebar(null); // Close history sidebar
     };
@@ -949,11 +952,11 @@ const IframeFullMapPage = () => {
         if (indicator.count === 1) {
             const pin = indicator.pins[0];
             setActivePinId(pin.id);
-            setPanToTarget({ 
-                lat: pin.lat, 
-                lng: pin.lng, 
+            setPanToTarget({
+                lat: pin.lat,
+                lng: pin.lng,
                 zoom: 15,
-                verticalOffset: 150 
+                verticalOffset: 150
             });
         } else {
             const bounds = new window.google.maps.LatLngBounds();
@@ -980,11 +983,14 @@ const IframeFullMapPage = () => {
         }
     };
 
+    const handleLocate = useCallback(() => {
+        setLocateTrigger(prev => prev + 1);
+        setIsViewCentered(true);
+    }, []);
+
     const handleToggleUnifiedSidebar = () => {
         setIsSidebarHidden(prev => !prev);
     };
-
-
 
     const isUnifiedSidebarOpen = activeSidebar === 'wilayah' || activeSidebar === 'regionInfo' || activeSidebar === 'history' || activeSidebar === 'layers' || activeSidebar === 'geoAi';
     const layerButtonOffset = isUnifiedSidebarOpen && !isSidebarHidden ? REGION_INFO_SIDEBAR_WIDTH : 0;
@@ -1114,6 +1120,8 @@ const IframeFullMapPage = () => {
                             onStreetViewVisibilityChange={setIsStreetViewVisible}
                             isStreetViewLayerActive={isStreetViewLayerActive}
                             onStreetViewUpdate={setStreetViewData}
+                            triggerFitBounds={locateTrigger}
+                            onMapMove={() => setIsViewCentered(false)}
                         >
                             {mapChildren}
                         </MapComponent>
@@ -1202,7 +1210,7 @@ const IframeFullMapPage = () => {
                                 </div>
                             </div>
 
-                            <MapControls isFullscreen={isFullscreen} onToggleFullscreen={handleToggleFullscreen} onBack={handleBack} isBackDisabled={navigationHistory.current.length <= 1} isPinningMode={isPinningMode} onTogglePinMode={() => setIsPinningMode(!isPinningMode)} isMobile={isMobile} />
+                            <MapControls isFullscreen={isFullscreen} onToggleFullscreen={handleToggleFullscreen} onBack={handleBack} isBackDisabled={navigationHistory.current.length <= 1} isPinningMode={isPinningMode} onTogglePinMode={() => setIsPinningMode(!isPinningMode)} onLocate={handleLocate} isLocateActive={isViewCentered} isMobile={isMobile} />
                             <>
                                 <MapLayerControl
                                     mapLayer={mapLayer}

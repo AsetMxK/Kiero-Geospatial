@@ -3,6 +3,7 @@ import MaximizeIcon from './icons/MaximizeIcon';
 import MinimizeIcon from './icons/MinimizeIcon';
 import PinIcon from './icons/PinIcon';
 import BackIcon from './icons/BackIcon';
+import { Locate } from 'lucide-react';
 
 /**
  * Komponen yang me-render kontrol mengambang di atas peta.
@@ -16,6 +17,8 @@ import BackIcon from './icons/BackIcon';
  * @param {boolean} props.isBackDisabled - Apakah tombol "kembali" harus dinonaktifkan.
  * @param {boolean} props.isPinningMode - Apakah peta saat ini dalam "mode pin".
  * @param {Function} props.onTogglePinMode - Fungsi callback untuk mengubah "mode pin".
+ * @param {Function} props.onLocate - Fungsi callback untuk memposisikan ulang view ke wilayah terpilih.
+ * @param {boolean} props.isLocateActive - Apakah view saat ini sedang fit ke wilayah terpilih.
  * @param {boolean} props.isMobile - Apakah tampilan saat ini adalah mobile.
  * @returns {JSX.Element} Sebuah div yang berisi tombol-tombol kontrol peta.
  */
@@ -26,6 +29,8 @@ const MapControls = ({
   isBackDisabled,
   isPinningMode,
   onTogglePinMode,
+  onLocate,
+  isLocateActive,
   isMobile,
 }) => {
   return (
@@ -58,6 +63,16 @@ const MapControls = ({
           `}
         >
           <PinIcon />
+        </button>
+      </Tooltip>
+
+      <Tooltip content={isLocateActive ? "Sudah di Posisi Wilayah" : "Kembali ke View Wilayah"}>
+        <button
+          onClick={onLocate}
+          disabled={isLocateActive}
+          className="bg-white p-2 rounded-full shadow-lg hover:shadow-xl hover:bg-gray-50 text-gray-600 hover:text-gray-900 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center"
+        >
+          <Locate size={20} />
         </button>
       </Tooltip>
 

@@ -64,6 +64,8 @@ const MapPage = () => {
     const [loadingText, setLoadingText] = useState('Memuat data peta...');
     const navigationHistory = useRef([{ selection: {}, viewMode: 'drill-down' }]);
     const [isPinningMode, setIsPinningMode] = useState(false);
+    const [locateTrigger, setLocateTrigger] = useState(0);
+    const [isViewCentered, setIsViewCentered] = useState(true);
     const [isBoundaryTransparent, setIsBoundaryTransparent] = useState(false);
     const [pins, setPins] = useState(getPinHistory);
     const [activePinId, setActivePinId] = useState(() => {
@@ -553,6 +555,7 @@ const MapPage = () => {
         }
 
         setCurrentSelection(newSelection);
+        setIsViewCentered(true);
         setFabPosition(null);
     }, [provinsiData, kabkotaData, kecamatanData, kabkotaLoading, kecamatanLoading, desaLoading]);
 
@@ -881,6 +884,10 @@ const MapPage = () => {
         setIsSidebarHidden(prev => !prev);
     };
 
+    const handleLocate = useCallback(() => {
+        setLocateTrigger(prev => prev + 1);
+        setIsViewCentered(true);
+    }, []);
 
 
     const isUnifiedSidebarOpen = activeSidebar === 'wilayah' || activeSidebar === 'regionInfo' || activeSidebar === 'history' || activeSidebar === 'layers' || activeSidebar === 'geoAi';
@@ -1009,6 +1016,8 @@ const MapPage = () => {
                             onStreetViewVisibilityChange={setIsStreetViewVisible}
                             isStreetViewLayerActive={isStreetViewLayerActive}
                             onStreetViewUpdate={setStreetViewData}
+                            triggerFitBounds={locateTrigger}
+                            onMapMove={() => setIsViewCentered(false)}
                         >
                             {mapChildren}
                         </MapComponent>
@@ -1097,7 +1106,7 @@ const MapPage = () => {
                                 </div>
                             </div>
 
-                            <MapControls isFullscreen={isFullscreen} onToggleFullscreen={handleToggleFullscreen} onBack={handleBack} isBackDisabled={navigationHistory.current.length <= 1} isPinningMode={isPinningMode} onTogglePinMode={() => setIsPinningMode(!isPinningMode)} isMobile={isMobile} />
+                            <MapControls isFullscreen={isFullscreen} onToggleFullscreen={handleToggleFullscreen} onBack={handleBack} isBackDisabled={navigationHistory.current.length <= 1} isPinningMode={isPinningMode} onTogglePinMode={() => setIsPinningMode(!isPinningMode)} onLocate={handleLocate} isLocateActive={isViewCentered} isMobile={isMobile} />
                             <>
                                 <MapLayerControl
                                     mapLayer={mapLayer}

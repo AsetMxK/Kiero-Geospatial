@@ -82,6 +82,8 @@ const MapComponent = ({
     onStreetViewVisibilityChange = () => { },
     isStreetViewLayerActive = false,
     onStreetViewUpdate = () => { },
+    triggerFitBounds = 0,
+    onMapMove = () => { },
     children
 }) => {
     const map = useMap();
@@ -211,7 +213,21 @@ const MapComponent = ({
         }
         setLabels(newLabels);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [map, selection, provinsiData, kabkotaData, kecamatanData, desaData, onInfoChange, forcedZoom]);
+    }, [map, selection, provinsiData, kabkotaData, kecamatanData, desaData, onInfoChange, forcedZoom, triggerFitBounds]);
+
+    useEffect(() => {
+        if (!map) return;
+        const listeners = [
+            map.addListener('dragstart', onMapMove),
+            map.addListener('zoom_changed', () => {
+                // Only trigger if not during fitBounds
+                if (!isNavigating) onMapMove();
+            })
+        ];
+        return () => {
+            listeners.forEach(l => google.maps.event.removeListener(l));
+        };
+    }, [map, onMapMove, isNavigating]);
 
 
     useEffect(() => {
