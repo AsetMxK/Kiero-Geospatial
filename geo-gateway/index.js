@@ -20,7 +20,7 @@ import { startArchiveScheduler } from './services/archiveService.js';
  * @async
  */
 const startServer = async () => {
-  dotenv.config();
+  dotenv.config({ override: true });
 
   try {
     await loadGatewayPrivateKey();

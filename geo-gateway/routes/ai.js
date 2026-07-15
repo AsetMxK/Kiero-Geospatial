@@ -18,6 +18,11 @@ router.use(tokenValidationMiddleware);
 
 router.use('/', proxy(process.env.AI_SERVICE_URL, {
     timeout: 300000,
+    proxyReqPathResolver: (req) => {
+        // Explicitly build the path from the AI_SERVICE_URL + incoming request path
+        const serviceUrl = new URL(process.env.AI_SERVICE_URL);
+        return serviceUrl.pathname.replace(/\/$/, '') + req.url;
+    },
     proxyReqOptDecorator: (proxyReqOpts) => {
         proxyReqOpts.timeout = 300000;
         // Replace client's internal Bearer JWT with the upstream AI service API token.
