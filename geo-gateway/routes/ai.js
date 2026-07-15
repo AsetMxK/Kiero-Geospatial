@@ -27,6 +27,13 @@ router.use('/', proxy(process.env.AI_SERVICE_URL, {
         proxyReqOpts.timeout = 300000;
         // Replace client's internal Bearer JWT with the upstream AI service API token.
         proxyReqOpts.headers['Authorization'] = `token ${process.env.AI_SERVICE_TOKEN}`;
+        
+        // Strip browser-specific origin/referer headers to bypass JupyterHub CORS/CSRF protection
+        delete proxyReqOpts.headers['origin'];
+        delete proxyReqOpts.headers['Origin'];
+        delete proxyReqOpts.headers['referer'];
+        delete proxyReqOpts.headers['Referer'];
+        
         return proxyReqOpts;
     },
     proxyErrorHandler: (err, res, next) => {
