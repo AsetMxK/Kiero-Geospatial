@@ -34,6 +34,10 @@ router.use('/', proxy(process.env.AI_SERVICE_URL, {
         delete proxyReqOpts.headers['referer'];
         delete proxyReqOpts.headers['Referer'];
         
+        // Set Host header to upstream target to prevent Tornado host mismatch check
+        const serviceUrl = new URL(process.env.AI_SERVICE_URL);
+        proxyReqOpts.headers['host'] = serviceUrl.host;
+        
         return proxyReqOpts;
     },
     proxyErrorHandler: (err, res, next) => {
