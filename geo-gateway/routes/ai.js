@@ -1,5 +1,4 @@
 import express from 'express';
-import { URL } from 'url';
 import cors from 'cors';
 import { corsOptionsDelegate } from '../middleware/corsMiddleware.js';
 import { tokenValidationMiddleware } from '../middleware/authMiddleware.js';
@@ -10,45 +9,83 @@ router.use(cors(corsOptionsDelegate));
 router.use(tokenValidationMiddleware);
 
 /**
- * @route ALL /ai/*
- * @description Serves as a gateway proxy for the AI Service.
- * Forwards all requests (GET, POST, PUT, DELETE, etc.) to the upstream AI Service configured in the environment.
- * Replaces the client's internal JWT Authorization header with the upstream AI service API token.
+ * @route POST /ai/ask
+ * @description Forwards the AI question to the upstream AI Service (JupyterHub proxy).
+ * Uses native fetch with AbortController for timeout control.
+ * Replaces the client's internal Bearer JWT with the upstream AI service API token.
+ *
+ * Body: { question: string, session_id?: string }
  */
+router.post('/ask', async (req, res) => {
+    const aiServiceUrl = process.env.AI_SERVICE_URL?.replace(/\/$/, '') + '/ask';
+    const aiToken = process.env.AI_SERVICE_TOKEN;
+    const timeoutMs = 300000; // 5 menit — sama dengan konfigurasi proxy sebelumnya
 
-router.use('/', proxy(process.env.AI_SERVICE_URL, {
-    timeout: 300000,
-    proxyReqPathResolver: (req) => {
-        // Explicitly build the path from the AI_SERVICE_URL + incoming request path
-        const serviceUrl = new URL(process.env.AI_SERVICE_URL);
-        return serviceUrl.pathname.replace(/\/$/, '') + req.url;
-    },
-    proxyReqOptDecorator: (proxyReqOpts) => {
-        proxyReqOpts.timeout = 300000;
-        // Replace client's internal Bearer JWT with the upstream AI service API token.
-        proxyReqOpts.headers['Authorization'] = `token ${process.env.AI_SERVICE_TOKEN}`;
+    const { question, session_id = '' } = req.body;
 
-        // Strip browser-specific origin/referer headers to bypass JupyterHub CORS/CSRF protection
-        delete proxyReqOpts.headers['origin'];
-        delete proxyReqOpts.headers['Origin'];
-        delete proxyReqOpts.headers['referer'];
-        delete proxyReqOpts.headers['Referer'];
+    if (!question) {
+        return res.status(400).json({
+            error: 'Bad Request',
+            message: 'Field "question" wajib diisi.'
+        });
+    }
 
-        // Set Host header to upstream target to prevent Tornado host mismatch check
-        const serviceUrl = new URL(process.env.AI_SERVICE_URL);
-        proxyReqOpts.headers['host'] = serviceUrl.host;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
-        return proxyReqOpts;
-    },
-    proxyErrorHandler: (err, res, next) => {
-        console.error('AI Proxy error:', err);
-        res.locals.errorMessage = err.stack;
-        res.status(502).json({
+    try {
+        const response = await fetch(aiServiceUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `token ${aiToken}`
+            },
+            body: JSON.stringify({ question, session_id }),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeout);
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`AI Service error [${response.status}]:`, errorText);
+            return res.status(response.status).json({
+                error: 'Upstream Error',
+                message: `AI service responded with status ${response.status}`,
+                details: errorText
+            });
+        }
+
+        const data = await response.json();
+        return res.status(200).json(data);
+
+    } catch (err) {
+        clearTimeout(timeout);
+
+        if (err.name === 'AbortError') {
+            console.error('AI Service timeout — tidak merespon dalam batas waktu.');
+            return res.status(504).json({
+                error: 'Gateway Timeout',
+                message: 'AI service tidak merespon dalam batas waktu yang ditentukan.'
+            });
+        }
+
+        if (err.cause?.code === 'UND_ERR_CONNECT_TIMEOUT' || err.cause?.code === 'ECONNREFUSED') {
+            console.error('AI Service tidak bisa dihubungi:', err.cause?.code);
+            return res.status(502).json({
+                error: 'Bad Gateway',
+                message: 'Tidak dapat terhubung ke AI service. Periksa VPN/jaringan atau status server.',
+                details: err.cause?.code
+            });
+        }
+
+        console.error('AI route error:', err);
+        return res.status(502).json({
             error: 'Bad Gateway',
-            message: 'Failed to communicate with AI service',
+            message: 'Gagal berkomunikasi dengan AI service.',
             details: err.message
         });
     }
-}));
+});
 
 export default router;
