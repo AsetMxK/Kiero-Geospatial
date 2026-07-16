@@ -34,6 +34,20 @@ router.use('/', proxy(process.env.AI_SERVICE_URL, {
         delete proxyReqOpts.headers['referer'];
         delete proxyReqOpts.headers['Referer'];
         
+        // Strip reverse-proxy headers that cause Host mismatch errors in Tornado/Jupyter when deployed on server
+        const headersToStrip = [
+            'x-forwarded-for', 'x-forwarded-host', 'x-forwarded-proto', 'x-forwarded-port',
+            'x-real-ip', 'x-scheme'
+        ];
+        headersToStrip.forEach(h => {
+            delete proxyReqOpts.headers[h];
+            const capitalized = h.split('-').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join('-');
+            delete proxyReqOpts.headers[capitalized];
+        });
+
+        // Ensure Accept header is JSON so we get JSON errors instead of HTML pages if something fails
+        proxyReqOpts.headers['accept'] = 'application/json';
+        
         // Set Host header to upstream target to prevent Tornado host mismatch check
         const serviceUrl = new URL(process.env.AI_SERVICE_URL);
         proxyReqOpts.headers['host'] = serviceUrl.host;
