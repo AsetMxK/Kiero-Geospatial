@@ -1,5 +1,7 @@
 import express from 'express';
-import proxy from 'express-http-proxy';
+import https from 'https';
+import http from 'http';
+import { URL } from 'url';
 import cors from 'cors';
 import { corsOptionsDelegate } from '../middleware/corsMiddleware.js';
 import { tokenValidationMiddleware } from '../middleware/authMiddleware.js';
@@ -11,58 +13,81 @@ router.use(tokenValidationMiddleware);
 
 /**
  * @route ALL /ai/*
- * @description Serves as a gateway proxy for the AI Service.
- * Forwards all requests (GET, POST, PUT, DELETE, etc.) to the upstream AI Service configured in the environment.
- * Replaces the client's internal JWT Authorization header with the upstream AI service API token.
+ * @description Manual proxy to the upstream AI (JupyterHub) Service.
+ *
+ * Why manual instead of express-http-proxy?
+ * The server runs behind an Nginx reverse proxy that injects X-Forwarded-* headers.
+ * Jupyter/Tornado uses these headers for host verification and blocks requests
+ * with mismatched host info (403 Forbidden). express-http-proxy forwards ALL
+ * incoming headers (including Nginx-injected ones) to upstream.
+ *
+ * This manual proxy builds a completely CLEAN request with only the
+ * headers that Jupyter expects: Authorization, Content-Type, Accept, Host.
  */
 
-router.use('/', proxy(process.env.AI_SERVICE_URL, {
-    timeout: 300000,
-    proxyReqPathResolver: (req) => {
-        // Explicitly build the path from the AI_SERVICE_URL + incoming request path
-        const serviceUrl = new URL(process.env.AI_SERVICE_URL);
-        return serviceUrl.pathname.replace(/\/$/, '') + req.url;
-    },
-    proxyReqOptDecorator: (proxyReqOpts) => {
-        proxyReqOpts.timeout = 300000;
-        // Replace client's internal Bearer JWT with the upstream AI service API token.
-        proxyReqOpts.headers['Authorization'] = `token ${process.env.AI_SERVICE_TOKEN}`;
-        
-        // Strip browser-specific origin/referer headers to bypass JupyterHub CORS/CSRF protection
-        delete proxyReqOpts.headers['origin'];
-        delete proxyReqOpts.headers['Origin'];
-        delete proxyReqOpts.headers['referer'];
-        delete proxyReqOpts.headers['Referer'];
-        
-        // Strip reverse-proxy headers that cause Host mismatch errors in Tornado/Jupyter when deployed on server
-        const headersToStrip = [
-            'x-forwarded-for', 'x-forwarded-host', 'x-forwarded-proto', 'x-forwarded-port',
-            'x-real-ip', 'x-scheme'
+router.use('/', (req, res) => {
+    const serviceUrl = new URL(process.env.AI_SERVICE_URL);
+    const upstreamPath = serviceUrl.pathname.replace(/\/$/, '') + req.url;
+
+    // Build a clean, minimal set of headers — no Nginx/proxy headers leak through
+    const upstreamHeaders = {
+        'authorization': `token ${process.env.AI_SERVICE_TOKEN}`,
+        'content-type':  req.headers['content-type'] || 'application/json',
+        'accept':        'application/json',
+        'host':          serviceUrl.host,
+    };
+
+    // Only forward content-length when there's a body to avoid Jupyter rejecting the request
+    if (req.headers['content-length']) {
+        upstreamHeaders['content-length'] = req.headers['content-length'];
+    }
+
+    const options = {
+        hostname: serviceUrl.hostname,
+        port:     serviceUrl.port || (serviceUrl.protocol === 'https:' ? 443 : 80),
+        path:     upstreamPath,
+        method:   req.method,
+        headers:  upstreamHeaders,
+        timeout:  300000,
+    };
+
+    const transport = serviceUrl.protocol === 'https:' ? https : http;
+
+    const proxyReq = transport.request(options, (proxyRes) => {
+        res.status(proxyRes.statusCode);
+
+        // Forward safe response headers only
+        const allowedResponseHeaders = [
+            'content-type', 'content-length', 'content-encoding',
+            'cache-control', 'etag', 'last-modified',
         ];
-        headersToStrip.forEach(h => {
-            delete proxyReqOpts.headers[h];
-            const capitalized = h.split('-').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join('-');
-            delete proxyReqOpts.headers[capitalized];
+        allowedResponseHeaders.forEach(h => {
+            if (proxyRes.headers[h]) res.setHeader(h, proxyRes.headers[h]);
         });
 
-        // Ensure Accept header is JSON so we get JSON errors instead of HTML pages if something fails
-        proxyReqOpts.headers['accept'] = 'application/json';
-        
-        // Set Host header to upstream target to prevent Tornado host mismatch check
-        const serviceUrl = new URL(process.env.AI_SERVICE_URL);
-        proxyReqOpts.headers['host'] = serviceUrl.host;
-        
-        return proxyReqOpts;
-    },
-    proxyErrorHandler: (err, res, next) => {
+        proxyRes.pipe(res, { end: true });
+    });
+
+    proxyReq.on('timeout', () => {
+        proxyReq.destroy();
+        if (!res.headersSent) {
+            res.status(504).json({ error: 'Gateway Timeout', message: 'AI service did not respond in time' });
+        }
+    });
+
+    proxyReq.on('error', (err) => {
         console.error('AI Proxy error:', err);
-        res.locals.errorMessage = err.stack;
-        res.status(502).json({
-            error: 'Bad Gateway',
-            message: 'Failed to communicate with AI service',
-            details: err.message
-        });
-    }
-}));
+        if (!res.headersSent) {
+            res.status(502).json({
+                error:   'Bad Gateway',
+                message: 'Failed to communicate with AI service',
+                details: err.message,
+            });
+        }
+    });
+
+    // Pipe request body to upstream
+    req.pipe(proxyReq, { end: true });
+});
 
 export default router;
