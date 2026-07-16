@@ -29,6 +29,16 @@ router.use('/', (req, res) => {
     const serviceUrl = new URL(process.env.AI_SERVICE_URL);
     const upstreamPath = serviceUrl.pathname.replace(/\/$/, '') + req.url;
 
+    // Serialize body if it was already parsed by express.json() middleware
+    let bodyData = null;
+    if (req.method !== 'GET' && req.method !== 'HEAD' && req.body) {
+        if (typeof req.body === 'string' || Buffer.isBuffer(req.body)) {
+            bodyData = req.body;
+        } else if (typeof req.body === 'object' && Object.keys(req.body).length > 0) {
+            bodyData = JSON.stringify(req.body);
+        }
+    }
+
     // Build a clean, minimal set of headers — no Nginx/proxy headers leak through
     const upstreamHeaders = {
         'authorization': `token ${process.env.AI_SERVICE_TOKEN}`,
@@ -37,9 +47,8 @@ router.use('/', (req, res) => {
         'host':          serviceUrl.host,
     };
 
-    // Only forward content-length when there's a body to avoid Jupyter rejecting the request
-    if (req.headers['content-length']) {
-        upstreamHeaders['content-length'] = req.headers['content-length'];
+    if (bodyData) {
+        upstreamHeaders['content-length'] = Buffer.byteLength(bodyData);
     }
 
     const options = {
@@ -86,8 +95,11 @@ router.use('/', (req, res) => {
         }
     });
 
-    // Pipe request body to upstream
-    req.pipe(proxyReq, { end: true });
+    // Write body and end request
+    if (bodyData) {
+        proxyReq.write(bodyData);
+    }
+    proxyReq.end();
 });
 
 export default router;
