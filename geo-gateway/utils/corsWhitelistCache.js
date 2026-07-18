@@ -44,12 +44,37 @@ export async function refreshWhitelistCache() {
  * @param {string} origin - Origin yang akan diperiksa (misalnya, 'https://example.com').
  * @returns {boolean} `true` jika origin diizinkan, `false` jika tidak.
  */
-export function isOriginAllowed(origin) {
-    if (!isCacheInitialized) {
-        console.warn("CORS check before cache initialization, denying origin:", origin);
-        return false;
+export async function isOriginAllowed(origin) {
+    // Check cache first
+    if (allowedOriginsWhitelist.has(origin)) {
+        return true;
     }
-    return allowedOriginsWhitelist.has(origin);
+
+    // Fallback to database query if not in cache (e.g. database/network timeout during startup or cache refresh)
+    try {
+        console.log(`CORS cache miss/uninitialized for origin '${origin}'. Fetching from database...`);
+        const client = await prisma.client.findFirst({
+            where: {
+                allowedOrigins: {
+                    contains: origin
+                }
+            },
+            select: { allowedOrigins: true }
+        });
+
+        if (client) {
+            const origins = client.allowedOrigins.split(',').map(o => o.trim());
+            if (origins.includes(origin)) {
+                // Populate cache dynamically
+                allowedOriginsWhitelist.add(origin);
+                return true;
+            }
+        }
+    } catch (error) {
+        console.error(`Error querying database fallback for origin '${origin}':`, error);
+    }
+
+    return false;
 }
 
 refreshWhitelistCache();

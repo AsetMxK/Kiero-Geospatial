@@ -98,6 +98,7 @@ router.use('/', proxy(process.env.AI_SERVICE_URL, {
         return serviceUrl.pathname.replace(/\/$/, '') + req.url;
     },
     proxyReqOptDecorator: (proxyReqOpts) => {
+        proxyReqOpts.headers['Authorization'] = `token ${process.env.AI_SERVICE_TOKEN}`;
         proxyReqOpts.timeout = 300000;
         // Replace client's internal Bearer JWT with the upstream AI service API token.
         proxyReqOpts.headers['Authorization'] = `token ${process.env.AI_SERVICE_TOKEN}`;
@@ -116,6 +117,7 @@ router.use('/', proxy(process.env.AI_SERVICE_URL, {
     },
     proxyErrorHandler: (err, res, next) => {
         console.error('AI Proxy error:', err);
+        console.error('AI Proxy error details:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
         res.locals.errorMessage = err.stack;
         res.status(502).json({
             error: 'Bad Gateway',
