@@ -18,12 +18,18 @@ router.use(tokenValidationMiddleware);
 
 router.use('/', proxy(process.env.AI_SERVICE_URL, {
     timeout: 300000,
+    proxyReqPathResolver: (req) => {
+        const targetPath = new URL(process.env.AI_SERVICE_URL).pathname;
+        return (targetPath.endsWith('/') ? targetPath.slice(0, -1) : targetPath) + req.url;
+    },
     proxyReqOptDecorator: (proxyReqOpts) => {
+        proxyReqOpts.headers['Authorization'] = `token ${process.env.AI_SERVICE_TOKEN}`;
         proxyReqOpts.timeout = 300000;
         return proxyReqOpts;
     },
     proxyErrorHandler: (err, res, next) => {
         console.error('AI Proxy error:', err);
+        console.error('AI Proxy error details:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
         res.locals.errorMessage = err.stack;
         res.status(502).json({
             error: 'Bad Gateway',

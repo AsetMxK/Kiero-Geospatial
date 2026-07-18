@@ -16,11 +16,15 @@ router.use(tokenValidationMiddleware);
  * This route is protected by JWT validation and CORS policies.
  */
 router.use('/', proxy(process.env.RESOURCE_SERVER_URL, {
-  timeout: 30000,
-  proxyReqOptDecorator: (proxyReqOpts) => {
-    proxyReqOpts.timeout = 30000;
-    return proxyReqOpts;
-  },
+    timeout: 30000,
+    proxyReqPathResolver: (req) => {
+        const targetPath = new URL(process.env.RESOURCE_SERVER_URL).pathname;
+        return (targetPath.endsWith('/') ? targetPath.slice(0, -1) : targetPath) + req.url;
+    },
+    proxyReqOptDecorator: (proxyReqOpts) => {
+        proxyReqOpts.timeout = 30000;
+        return proxyReqOpts;
+    },
   proxyErrorHandler: (err, res, next) => {
     console.error('Proxy error:', err);
     res.locals.errorMessage = err.stack;
