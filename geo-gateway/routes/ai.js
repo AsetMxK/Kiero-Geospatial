@@ -9,25 +9,13 @@ const router = express.Router();
 router.use(cors(corsOptionsDelegate));
 router.use(tokenValidationMiddleware);
 
-/**
- * Returns true if the URL points to a local/loopback host.
- * Used to skip token auth for local AI services.
- */
-function isLocalUrl(url) {
-    try {
-        const { hostname } = new URL(url);
-        return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
-    } catch {
-        return false;
-    }
-}
 
 /**
  * @route ALL /ai/*
  * @description Serves as a gateway proxy for the AI Service.
  * Forwards all requests (GET, POST, PUT, DELETE, etc.) to the upstream AI Service configured in the environment.
  * The proxy handles URL forwarding, preserving the path and query parameters.
- * If AI_SERVICE_URL points to localhost/127.0.0.1, Authorization header is omitted (no token required).
+ * Authorization header is only sent if AI_SERVICE_TOKEN is set in the environment.
  */
 
 router.use('/', proxy(process.env.AI_SERVICE_URL, {
@@ -37,8 +25,8 @@ router.use('/', proxy(process.env.AI_SERVICE_URL, {
         return (targetPath.endsWith('/') ? targetPath.slice(0, -1) : targetPath) + req.url;
     },
     proxyReqOptDecorator: (proxyReqOpts) => {
-        // Only attach token for remote (non-local) AI services
-        if (!isLocalUrl(process.env.AI_SERVICE_URL) && process.env.AI_SERVICE_TOKEN) {
+        // Only attach token if AI_SERVICE_TOKEN is set; leave empty for token-free services
+        if (process.env.AI_SERVICE_TOKEN) {
             proxyReqOpts.headers['Authorization'] = `token ${process.env.AI_SERVICE_TOKEN}`;
         }
         proxyReqOpts.timeout = 300000;
