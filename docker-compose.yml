@@ -41,6 +41,8 @@ services:
       - GATEWAY_PUBLIC_KEY_PATH=/app/keys/gateway_public.pem
     volumes:
       - ./keys:/app/keys:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - frontend
       - backend
