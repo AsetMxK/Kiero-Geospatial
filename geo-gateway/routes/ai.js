@@ -25,9 +25,12 @@ router.use('/', proxy(process.env.AI_SERVICE_URL, {
         return (targetPath.endsWith('/') ? targetPath.slice(0, -1) : targetPath) + req.url;
     },
     proxyReqOptDecorator: (proxyReqOpts) => {
-        // Only attach token if AI_SERVICE_TOKEN is set; leave empty for token-free services
+        // Only attach token if AI_SERVICE_TOKEN is set; remove header completely if empty
         if (process.env.AI_SERVICE_TOKEN) {
             proxyReqOpts.headers['Authorization'] = `token ${process.env.AI_SERVICE_TOKEN}`;
+        } else {
+            delete proxyReqOpts.headers['authorization'];
+            delete proxyReqOpts.headers['Authorization'];
         }
         proxyReqOpts.timeout = 300000;
         return proxyReqOpts;
