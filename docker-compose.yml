@@ -83,6 +83,7 @@ services:
       - DATABASE_URL=${BACKEND_DATABASE_URL}
       - GATEWAY_ISSUER_URL=${GATEWAY_URL:-http://localhost:3000}
       - GATEWAY_PUBLIC_KEY_PATH=/app/keys/gateway_public.pem
+      - ENABLE_COORDINATE_DEBUG=${ENABLE_COORDINATE_DEBUG:-false}
     volumes:
       - ./keys:/app/keys:ro
     networks:
