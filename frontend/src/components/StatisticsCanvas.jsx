@@ -126,9 +126,10 @@ const CombinedCategoryTable = ({ data, isLoading, isError }) => {
  * @param {boolean} props.isEnabled - Bendera untuk mengontrol visibilitas komponen. Jika `false`, komponen mengembalikan `null`.
  * @param {string} props.regionCode - Kode wilayah untuk mengambil data statistik.
  * @param {{startDate: Date, endDate: Date}} props.dateRange - Rentang tanggal untuk mengambil data statistik.
+ * @param {number|null} [props.categoryId] - ID kategori untuk memfilter tiket.
  * @returns {JSX.Element|null} Komponen kanvas statistik, atau `null` jika tidak diaktifkan.
  */
-const StatisticsCanvas = ({ isEnabled, regionCode, dateRange }) => {
+const StatisticsCanvas = ({ isEnabled, regionCode, dateRange, categoryId }) => {
     const [activeFilter, setActiveFilter] = useState(TICKET_STATUSES[0].key);
     const shouldFetch = isEnabled;
 
@@ -136,7 +137,8 @@ const StatisticsCanvas = ({ isEnabled, regionCode, dateRange }) => {
         regionCode,
         dateRange,
         activeFilter,
-        shouldFetch
+        shouldFetch,
+        categoryId
     );
 
     const processedData = useMemo(() => {

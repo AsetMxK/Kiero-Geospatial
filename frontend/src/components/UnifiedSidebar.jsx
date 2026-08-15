@@ -37,6 +37,7 @@ const UnifiedSidebar = ({
     // Props for Region Info view
     regionData,
     dateRange,
+    categoryId,
     // Props for History view
     pins,
     onGoToPin,
@@ -138,6 +139,7 @@ const UnifiedSidebar = ({
                         activeRegionInfoTab={activeRegionInfoTab}
                         setActiveRegionInfoTab={setActiveRegionInfoTab}
                         dateRange={dateRange}
+                        categoryId={categoryId}
                     />
                 );
             case 'history':

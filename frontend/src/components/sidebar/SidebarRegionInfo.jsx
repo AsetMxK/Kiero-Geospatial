@@ -12,7 +12,8 @@ const SidebarRegionInfo = ({
     regionData,
     activeRegionInfoTab,
     setActiveRegionInfoTab,
-    dateRange
+    dateRange,
+    categoryId
 }) => {
     const [isCopied, setIsCopied] = useState(false);
     const [copyError, setCopyError] = useState(false);
@@ -119,7 +120,7 @@ const SidebarRegionInfo = ({
 
             <div className="bg-white p-4 overflow-y-auto custom-scrollbar flex-grow">
                 {activeRegionInfoTab === 'stats' && (
-                    <Statistics regionCode={getRegionCodeForStats()} dateRange={dateRange} />
+                    <Statistics regionCode={getRegionCodeForStats()} dateRange={dateRange} categoryId={categoryId} />
                 )}
                 {activeRegionInfoTab === 'info' && (
                     <ul className="divide-y divide-gray-200">

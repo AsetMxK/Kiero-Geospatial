@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client';
+import { getDateRangeFilter } from '../utils/queryUtils.js';
 
 /**
  * Mengambil data tiket yang diagregasi (kluster) dari database berdasarkan batas peta dan tingkat zoom.
@@ -15,7 +16,7 @@ import { Prisma } from '@prisma/client';
  * @param {number} bounds.maxLat - Latitude maksimum.
  * @param {number} zoom - Tingkat zoom peta saat ini, digunakan untuk menentukan presisi pengklasteran.
  * @param {string} [regionCode] - Kode wilayah hierarkis opsional untuk memfilter tiket.
- * @param {string} [category_id] - ID kategori sistem opsional untuk memfilter tiket.
+ * @param {string|number} [category_id] - ID kategori sistem opsional untuk memfilter tiket.
  * @param {string} [startDate] - Tanggal mulai opsional (YYYY-MM-DD) untuk pemfilteran.
  * @param {string} [endDate] - Tanggal akhir opsional (YYYY-MM-DD) untuk pemfilteran.
  * @returns {Promise<Array<{count: number, lat: number, lng: number}>>} Sebuah promise yang me-resolve ke array objek kluster, masing-masing dengan jumlah dan koordinat centroid.
@@ -26,6 +27,7 @@ async function getAggregatedTickets(tx, bounds, zoom, regionCode, category_id, s
   const whereConditions = [];
 
   // Bangun kondisi WHERE dinamis
+  whereConditions.push(Prisma.sql`t.coordinates IS NOT NULL`);
   whereConditions.push(
     Prisma.sql`t.coordinates && ST_MakeEnvelope(${minLng}, ${minLat}, ${maxLng}, ${maxLat}, 4326)`
   );
@@ -47,13 +49,14 @@ async function getAggregatedTickets(tx, bounds, zoom, regionCode, category_id, s
     }
   }
 
-  if (category_id) whereConditions.push(Prisma.sql`t.category_id = ${category_id}`);
+  if (category_id !== undefined && !isNaN(category_id)) {
+    whereConditions.push(Prisma.sql`t.category_id = ${category_id}`);
+  }
 
   // Tambahkan filter rentang tanggal jika disediakan
-  if (startDate && endDate) {
-    const start = new Date(`${startDate}T00:00:00.000Z`);
-    const end = new Date(`${endDate}T23:59:59.999Z`);
-    whereConditions.push(Prisma.sql`t.created_at BETWEEN ${start} AND ${end}`);
+  if (startDate || endDate) {
+    const dateFilter = getDateRangeFilter(startDate, endDate);
+    whereConditions.push(Prisma.sql`t.created_at BETWEEN ${dateFilter.gte} AND ${dateFilter.lte}`);
   }
 
   let precision;

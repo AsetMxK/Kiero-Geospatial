@@ -50,7 +50,8 @@ router.get('/view', async (req, res) => {
     maxLat: parseFloat(maxLat),
   };
 
-  const category_id = parseInt(category);
+  const parsedCategory = category ? parseInt(category, 10) : undefined;
+  const category_id = !isNaN(parsedCategory) ? parsedCategory : undefined;
 
   const zoomLevel = parseInt(zoom, 10);
 
@@ -63,19 +64,23 @@ router.get('/view', async (req, res) => {
       // Hasilkan klausa WHERE untuk regionCode dari utilitas
       const regionWhereClause = getRegionFilter(regionCode, 'RAW');
 
-      // Dapatkan filter tanggal dari utilitas
-      const dateFilter = getDateRangeFilter(startDate, endDate);
-      const dateWhereClause = Prisma.sql`AND t.created_at BETWEEN ${dateFilter.gte} AND ${dateFilter.lte}`;
+      // Filter tanggal hanya jika startDate atau endDate disediakan
+      let dateWhereClause = Prisma.empty;
+      if (startDate || endDate) {
+        const dateFilter = getDateRangeFilter(startDate, endDate);
+        dateWhereClause = Prisma.sql`AND t.created_at BETWEEN ${dateFilter.gte} AND ${dateFilter.lte}`;
+      }
 
       // Jika pengguna melakukan zoom-in cukup dekat (di atas ambang batas)
       if (zoomLevel >= ZOOM_LEVEL_THRESHOLD) {
         // Tambahkan filter category_id jika ada
-        const scaidWhereClause = category_id ? Prisma.sql`AND t.category_id = ${category_id}` : Prisma.empty;
+        const scaidWhereClause = category_id !== undefined ? Prisma.sql`AND t.category_id = ${category_id}` : Prisma.empty;
 
         // Ambil titik-titik tiket individual
         const tickets = await tx.$queryRaw`
           SELECT
             t.id,
+            t.ticket_number,
             t.status,
             ST_X(t.coordinates) AS lng,
             ST_Y(t.coordinates) AS lat
@@ -83,7 +88,8 @@ router.get('/view', async (req, res) => {
             tickets t
           LEFT JOIN regions r ON t.region_id = r.id
           WHERE
-            ST_Within(t.coordinates, ST_MakeEnvelope(${bounds.minLng}, ${bounds.minLat}, ${bounds.maxLng}, ${bounds.maxLat}, 4326))
+            t.coordinates IS NOT NULL
+            AND ST_Within(t.coordinates, ST_MakeEnvelope(${bounds.minLng}, ${bounds.minLat}, ${bounds.maxLng}, ${bounds.maxLat}, 4326))
             AND ${regionWhereClause}
             ${scaidWhereClause}
             ${dateWhereClause}
@@ -91,6 +97,7 @@ router.get('/view', async (req, res) => {
         `;
         return tickets.map(ticket => ({
           id: ticket.id.toString(),
+          ticket_number: ticket.ticket_number,
           status: ticket.status,
           type: 'point',
           coordinates: {

@@ -197,7 +197,7 @@ const MapPage = () => {
         window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
     }, []);
 
-    const { data: regionStats, loading: statsLoading } = useRegionStats(previewInfo?.code, dateRange);
+    const { data: regionStats, loading: statsLoading } = useRegionStats(previewInfo?.code, dateRange, categorySelection);
 
     const selectedCategoryObj = categories?.find(c => c.id === categorySelection);
     const categoryUrlValue = selectedCategoryObj ? toSlug(selectedCategoryObj.category_name) : null;
@@ -1096,6 +1096,7 @@ const MapPage = () => {
                                         // Region Info Props
                                         regionData={augmentedInfoData}
                                         dateRange={dateRange}
+                                        categoryId={categorySelection}
                                         // History Props
                                         pins={pins}
                                         onGoToPin={handleGoToPin}

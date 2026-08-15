@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { X } from 'lucide-react';
 import { Map, useMap } from '@vis.gl/react-google-maps';
 import { useQueryClient } from '@tanstack/react-query';
@@ -9,6 +9,7 @@ import MapLabel from './MapLabel';
 import Pin from './Pin';
 import TicketPin from './TicketPin';
 import ClusterPin from './ClusterPin';
+import MultiTicketPin from './MultiTicketPin';
 import { ACTION_SIDEBAR_WIDTH, REGION_INFO_SIDEBAR_WIDTH } from '../constants/layout';
 
 /**
@@ -420,6 +421,42 @@ const MapComponent = ({
         };
     }, [map, selection, onSelectionChange, isPinningMode, onAddPin, onMapClick, mapViewMode, onSubRegionClick, onRegionClick]);
 
+    const processedTickets = useMemo(() => {
+        if (!Array.isArray(tickets) || tickets.length === 0) return [];
+
+        const clusters = [];
+        const pointGroups = new window.Map();
+
+        tickets.forEach((item) => {
+            if (item.type === 'cluster') {
+                clusters.push(item);
+            } else if (item.type === 'point' && item.coordinates && typeof item.coordinates.lat === 'number' && typeof item.coordinates.lng === 'number') {
+                const key = `${item.coordinates.lat.toFixed(5)},${item.coordinates.lng.toFixed(5)}`;
+                if (!pointGroups.has(key)) {
+                    pointGroups.set(key, []);
+                }
+                pointGroups.get(key).push(item);
+            }
+        });
+
+        const points = [];
+        pointGroups.forEach((groupTickets) => {
+            if (groupTickets.length === 1) {
+                points.push(groupTickets[0]);
+            } else {
+                points.push({
+                    type: 'point',
+                    isMulti: true,
+                    lat: groupTickets[0].coordinates.lat,
+                    lng: groupTickets[0].coordinates.lng,
+                    tickets: groupTickets,
+                });
+            }
+        });
+
+        return [...clusters, ...points];
+    }, [tickets]);
+
 
     return (
         <div style={{ position: 'relative', width: '100%', height: '100%' }}>
@@ -463,7 +500,7 @@ const MapComponent = ({
                 );
             })}
 
-            {mapViewMode === 'region-only' && tickets.map(item => {
+            {mapViewMode === 'region-only' && processedTickets.map(item => {
                 // Jika tipe adalah 'cluster', render komponen ClusterPin
                 if (item.type === 'cluster') {
                     return (
@@ -475,8 +512,27 @@ const MapComponent = ({
                         />
                     );
                 }
-                // Jika tipe adalah 'point', render komponen TicketPin yang sudah ada
+                // Jika tipe adalah 'point'
                 if (item.type === 'point') {
+                    // Jika terdapat beberapa tiket pada koordinat presisi yang sama
+                    if (item.isMulti) {
+                        return (
+                            <MultiTicketPin
+                                key={`multi-${item.lat}-${item.lng}`}
+                                lat={item.lat}
+                                lng={item.lng}
+                                tickets={item.tickets}
+                                activeTicketId={activeTicketId}
+                                onActiveTicketChange={onActiveTicketChange}
+                                details={activeTicketDetails}
+                                isLoadingDetails={isTicketDetailLoading}
+                                errorDetails={ticketDetailError}
+                                onStreetViewVisibilityChange={onStreetViewVisibilityChange}
+                                onStreetViewUpdate={onStreetViewUpdate}
+                            />
+                        );
+                    }
+                    // Jika hanya satu tiket pada koordinat tersebut
                     if (!item.coordinates) return null;
                     const isActive = item.id === activeTicketId;
                     const handleSelect = () => onActiveTicketChange(isActive ? null : item.id);

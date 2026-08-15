@@ -13,11 +13,12 @@ import StatisticsCanvas from './StatisticsCanvas';
  * @param {object} props - Properti komponen.
  * @param {string} props.regionCode - Kode hierarkis wilayah yang statistiknya akan ditampilkan.
  * @param {{startDate: Date, endDate: Date}} props.dateRange - Rentang tanggal untuk memfilter statistik.
+ * @param {number|null} [props.categoryId] - ID kategori untuk memfilter tiket.
  * @returns {JSX.Element|null} Komponen statistik, atau null jika tidak ada data.
  */
-const Statistics = ({ regionCode, dateRange }) => {
+const Statistics = ({ regionCode, dateRange, categoryId }) => {
     const [isDetailsVisible, setIsDetailsVisible] = useState(false);
-    const { data: stats, isLoading, isError } = useRegionStats(regionCode, dateRange);
+    const { data: stats, isLoading, isError } = useRegionStats(regionCode, dateRange, categoryId);
 
     if (isLoading) {
         return (
@@ -33,7 +34,7 @@ const Statistics = ({ regionCode, dateRange }) => {
     if (!stats) return null;
 
     const { total, ...statusCounts } = stats;
-    const statusKeys = Object.keys(statusCounts);
+    const statusKeys = Object.keys(statusCounts).filter(key => typeof statusCounts[key] === 'number');
 
     return (
         <>
@@ -73,6 +74,7 @@ const Statistics = ({ regionCode, dateRange }) => {
                 isEnabled={isDetailsVisible}
                 regionCode={regionCode}
                 dateRange={dateRange}
+                categoryId={categoryId}
             />
         </>
     );
