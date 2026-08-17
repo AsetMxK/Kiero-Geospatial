@@ -8,6 +8,11 @@ const REFRESH_TOKEN_ENDPOINT = `${GATEWAY_URL}/auth-proxy/proxy-refresh`;
 let isRefreshing = false;
 let failedQueue = [];
 
+// Proteksi anti-spam error dialog saat terjadi retry berulang-ulang
+let lastErrorDispatchTime = 0;
+let lastErrorMessage = '';
+const ERROR_DISPATCH_COOLDOWN_MS = 10000; // Cooldown 10 detik
+
 // ============================================================================
 // BroadcastChannel untuk sinkronisasi token antar tabs
 // ============================================================================
@@ -102,6 +107,8 @@ apiClient.interceptors.request.use(
   }
 );
 
+const MAX_SERVER_RETRIES = 2; // Total 3 percobaan: 1 kali awal + 2 kali retry
+
 apiClient.interceptors.response.use(
   (response) => {
     return response;
@@ -109,17 +116,18 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     const refreshToken = getRefreshToken();
-    if (error.response?.status === 401 && refreshToken && !originalRequest._retry) {
 
+    // 1. Tangani 401 (Refresh Token Flow)
+    if (error.response?.status === 401 && refreshToken && originalRequest && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
-          .then(token => {
+          .then((token) => {
             originalRequest.headers['Authorization'] = `Bearer ${token}`;
             return axios(originalRequest);
           })
-          .catch(err => {
+          .catch((err) => {
             return Promise.reject(err);
           });
       }
@@ -144,7 +152,6 @@ apiClient.interceptors.response.use(
         processQueue(null, access_token);
 
         return apiClient(originalRequest);
-
       } catch (refreshError) {
         console.error('Gagal me-refresh token:', refreshError);
         clearTokens();
@@ -160,9 +167,36 @@ apiClient.interceptors.response.use(
       }
     }
 
-    if (error.response && error.response.status >= 500) {
-      const message = error.response.data?.message || 'Terjadi kesalahan internal pada server. Silakan coba lagi nanti.';
-      window.dispatchEvent(new CustomEvent('AXIOS_ERROR', { detail: message }));
+    // 2. Tangani Retry Otomatis untuk 5xx dan Network Error (Termasuk non-React Query & Web Worker calls)
+    const isCanceled = axios.isCancel(error) || error.code === 'ERR_CANCELED';
+    const isServerErrorOrNetwork = !isCanceled && (
+      (error.response && error.response.status >= 500) ||
+      (!error.response && (error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')))
+    );
+
+    if (isServerErrorOrNetwork && originalRequest && !originalRequest._isRetryExhausted) {
+      originalRequest._serverRetryCount = (originalRequest._serverRetryCount || 0) + 1;
+
+      // Lakukan silent retry di background jika kuota retry belum habis
+      if (originalRequest._serverRetryCount <= MAX_SERVER_RETRIES) {
+        const delayMs = Math.min(1000 * Math.pow(2, originalRequest._serverRetryCount - 1), 4000);
+        console.warn(`[apiClient] Permintaan gagal (${error.response?.status || error.message}). Mencoba ulang secara otomatis (${originalRequest._serverRetryCount}/${MAX_SERVER_RETRIES}) dalam ${delayMs}ms...`);
+
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        return apiClient(originalRequest);
+      }
+
+      // Tandai bahwa seluruh percobaan retry telah gagal total
+      originalRequest._isRetryExhausted = true;
+
+      // HANYA dipancarkan saat SEMUA percobaan retry telah habis dan gagal total
+      const message = error.response?.data?.message || 'Terjadi kesalahan pada server setelah beberapa percobaan. Silakan coba lagi nanti.';
+      const now = Date.now();
+      if (now - lastErrorDispatchTime > ERROR_DISPATCH_COOLDOWN_MS || message !== lastErrorMessage) {
+        lastErrorDispatchTime = now;
+        lastErrorMessage = message;
+        window.dispatchEvent(new CustomEvent('AXIOS_ERROR', { detail: message }));
+      }
     }
 
     return Promise.reject(error);
