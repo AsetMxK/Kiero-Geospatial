@@ -1,4 +1,5 @@
-# Proyek Peta Geospasial
+# Kiero-Geospatial
+Geo spatial for Mendawai System - Proyek Peta Geospasial
 
 Aplikasi web pemetaan geospasial interaktif yang memungkinkan pengguna untuk mencari dan memvisualisasikan data berdasarkan nomor telepon dan wilayah administratif. Pengguna dapat mencari awalan nomor telepon untuk melihat cakupan geografisnya di peta, menjelajahi batas-batas wilayah administratif (provinsi hingga desa), dan melihat statistik tiket yang terkait dengan wilayah tersebut.
 
@@ -167,3 +168,4 @@ npm test --prefix backend
 ## Integrasi Pihak Ketiga
 
 Untuk panduan tentang cara menyematkan peta ini sebagai `iframe` di aplikasi Anda sendiri, silakan merujuk ke dokumen [THIRD_PARTY_INTEGRATION.md](THIRD_PARTY_INTEGRATION.md).
+
